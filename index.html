@@ -85,6 +85,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <!-- QRCode.js (Standalone client-side QR Code generation) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
@@ -113,10 +115,10 @@
       <!-- 右側功能區塊 -->
       <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
         <!-- 登入資訊（當有登入身分時顯示） -->
-        <!-- 雲端資料庫連線狀態指示徽章 -->
-        <div id="cloudSyncBadge" class="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs" title="Firebase Firestore 資料庫連線狀態">
-          <span id="cloudSyncDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="cloudSyncText">雲端同步 (timeslot-b0553)</span>
+        <!-- 雲端資料庫連線狀態指示燈號（僅顯示燈號） -->
+        <div id="cloudSyncBadge" class="hidden sm:inline-flex items-center justify-center p-2 rounded-full bg-emerald-50 border border-emerald-200 shadow-2xs transition" title="雲端已同步 (Firebase Firestore: timeslot-b0553)">
+          <span id="cloudSyncDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="cloudSyncText" class="sr-only">雲端已同步</span>
         </div>
 
         <div id="userInfoArea" class="hidden items-center space-x-2 bg-slate-100 py-1 px-3 rounded-lg text-sm">
@@ -164,27 +166,69 @@
         歡迎各位班級導師。請輸入您的班級代號登入，登記貴班節次時段，以便教務處與輔導室順利安排施測。
       </p>
 
-      <!-- 快捷登入卡片 -->
-      <div class="w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200">
-        <h3 class="text-lg font-bold text-slate-800 mb-4 text-left flex items-center">
-          <span class="w-1.5 h-5 bg-sky-600 rounded mr-2"></span>
-          班級導師登入
-        </h3>
-        <form id="formTeacherLoginQuick" class="space-y-4">
+      <!-- 導師登入與手機掃碼 QR Code 區塊 -->
+      <div class="w-full max-w-2xl grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch text-left">
+        <!-- 左側：班級導師代號登入 (7 欄) -->
+        <div class="md:col-span-7 bg-white p-6 sm:p-7 rounded-2xl shadow-md border border-slate-200 flex flex-col justify-between">
           <div>
-            <label for="inputClassCodeQuick" class="block text-sm font-semibold text-slate-700 text-left mb-1">
-              班級代號
-            </label>
-            <input type="text" id="inputClassCodeQuick" inputmode="numeric" maxlength="4" autocomplete="off"
-                   class="w-full px-4 py-3 text-lg font-mono text-center tracking-widest border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition" />
+            <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-1 flex items-center">
+              <span class="w-1.5 h-5 bg-sky-600 rounded mr-2"></span>
+              班級導師登入
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">輸入 3 位數班級代號（如 101、302）快速進入</p>
+            <form id="formTeacherLoginQuick" class="space-y-4">
+              <div>
+                <label for="inputClassCodeQuick" class="block text-xs font-semibold text-slate-700 mb-1">
+                  班級代號
+                </label>
+                <input type="text" id="inputClassCodeQuick" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="例如：101"
+                       class="w-full px-4 py-3 text-lg font-mono text-center tracking-widest border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition" />
+              </div>
+              <button type="submit" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow transition duration-150 flex items-center justify-center space-x-2">
+                <span>進入登記介面</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                </svg>
+              </button>
+            </form>
           </div>
-          <button type="submit" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow transition duration-150 flex items-center justify-center space-x-2">
-            <span>進入登記介面</span>
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-            </svg>
-          </button>
-        </form>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span>全校 1~6 年級共 36 班</span>
+            <span class="text-sky-600 font-medium">免密碼即刻填報</span>
+          </div>
+        </div>
+
+        <!-- 右側：手機掃描填報 QR Code 卡片 (5 欄) -->
+        <div class="md:col-span-5 bg-white p-6 sm:p-7 rounded-2xl shadow-md border border-slate-200 flex flex-col items-center justify-between text-center">
+          <div>
+            <div class="flex items-center justify-center space-x-1.5 text-xs font-bold text-slate-800 mb-1">
+              <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+              </svg>
+              <span>手機掃碼快速填報</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mb-3">使用手機相機掃描直接填報</p>
+
+            <!-- QR Code 容器 -->
+            <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl shadow-2xs inline-flex items-center justify-center mx-auto mb-2">
+              <div id="qrcodeContainer" class="w-[125px] h-[125px] flex items-center justify-center overflow-hidden">
+                <!-- 動態注入 QRCode -->
+              </div>
+            </div>
+          </div>
+
+          <div class="w-full mt-2">
+            <button type="button" id="btnCopyAppUrl" class="w-full py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1">
+              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <span>複製系統連結</span>
+            </button>
+            <div class="mt-2 text-[10px] text-slate-400 truncate" id="qrUrlLabel">
+              https://timeslot-b0553.web.app
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -832,7 +876,7 @@
             </label>
             <input type="text" id="inputNewThemeTitle" required
                    class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                   placeholder="例如：115學年度 上學期成長測驗" />
+                   placeholder="例如:115學年上學期 成長測驗" />
           </div>
 
           <div>
@@ -924,7 +968,8 @@
               主題名稱 <span class="text-rose-500">*</span>
             </label>
             <input type="text" id="inputEditThemeTitle" required
-                   class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+                   class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                   placeholder="例如:115學年上學期 成長測驗" />
           </div>
 
           <div>
@@ -1049,6 +1094,61 @@
       ];
 
       // 狀態管理物件
+      
+      // ====================================================
+      // 首頁 QR Code 動態生成與網址複製功能
+      // ====================================================
+      function getAppShareUrl() {
+        let url = window.location.href;
+        if (!url || url.startsWith('file:') || url.startsWith('about:') || url.startsWith('data:') || url.startsWith('blob:')) {
+          // 當地端檔案或預覽環境開啟時，預設連結至 Firebase 專案網址
+          return "https://timeslot-b0553.web.app";
+        }
+        return url;
+      }
+
+      function renderHomeQRCode() {
+        const container = document.getElementById('qrcodeContainer');
+        const urlLabel = document.getElementById('qrUrlLabel');
+        if (!container) return;
+
+        const shareUrl = getAppShareUrl();
+        if (urlLabel) {
+          try {
+            const parsed = new URL(shareUrl);
+            urlLabel.textContent = parsed.host || shareUrl;
+          } catch (e) {
+            urlLabel.textContent = shareUrl;
+          }
+          urlLabel.title = shareUrl;
+        }
+
+        container.innerHTML = '';
+
+        if (typeof QRCode !== 'undefined') {
+          try {
+            new QRCode(container, {
+              text: shareUrl,
+              width: 125,
+              height: 125,
+              colorDark: "#0f172a",
+              colorLight: "#f8fafc",
+              correctLevel: QRCode.CorrectLevel.M
+            });
+            return;
+          } catch (err) {
+            console.warn("QRCode.js generation fallback:", err);
+          }
+        }
+
+        // 離線/無庫時使用 QR 圖片標籤降級呈現
+        const img = document.createElement('img');
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=125x125&margin=2&data=${encodeURIComponent(shareUrl)}`;
+        img.alt = "系統登記 QR Code";
+        img.className = "w-[125px] h-[125px] rounded";
+        container.appendChild(img);
+      }
+
       const state = {
         currentUser: null,       // { role: 'teacher'|'admin', classCode: '101', className: '一年一班' }
         currentDate: new Date(), // 當前檢視的日期 (預設今天)
@@ -1100,16 +1200,18 @@
         const dot = document.getElementById('cloudSyncDot');
         const adminTag = document.getElementById('adminCloudStatusTag');
 
-        if (badge && text) {
+        if (badge) {
           badge.classList.remove('hidden');
           if (isOnline) {
-            badge.className = "hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs";
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-            text.textContent = message || "雲端同步 (timeslot-b0553)";
+            badge.className = "hidden sm:inline-flex items-center justify-center p-2 rounded-full bg-emerald-50 border border-emerald-200 shadow-2xs transition";
+            badge.title = message || "雲端已同步 (timeslot-b0553)";
+            if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+            if (text) text.textContent = message || "雲端已同步";
           } else {
-            badge.className = "hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs";
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400";
-            text.textContent = message || "本機模式 (離線暫存)";
+            badge.className = "hidden sm:inline-flex items-center justify-center p-2 rounded-full bg-amber-50 border border-amber-200 shadow-2xs transition";
+            badge.title = message || "本機模式 (離線暫存)";
+            if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+            if (text) text.textContent = message || "本機模式";
           }
         }
 
@@ -1683,6 +1785,7 @@
           userInfoArea.classList.remove('flex');
           btnOpenTeacherLogin.classList.remove('hidden');
           btnOpenTeacherLogin.classList.add('flex');
+          renderHomeQRCode();
         } else if (state.currentUser.role === 'teacher') {
           viewGuest.classList.add('hidden');
           viewTeacher.classList.remove('hidden');
@@ -2618,6 +2721,23 @@
           saveData();
           updateView();
         });
+
+        // 首頁複製填報連結按鈕
+        const btnCopyUrl = document.getElementById('btnCopyAppUrl');
+        if (btnCopyUrl) {
+          btnCopyUrl.addEventListener('click', function() {
+            const shareUrl = getAppShareUrl();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(shareUrl).then(() => {
+                showToast("已成功複製系統填報連結至剪貼簿！");
+              }).catch(() => {
+                showToast("系統連結已產生：" + shareUrl);
+              });
+            } else {
+              showToast("系統連結：" + shareUrl);
+            }
+          });
+        }
 
         document.getElementById('btnPrevWeek').addEventListener('click', function() {
           const d = new Date(state.currentDate);
