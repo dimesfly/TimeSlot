@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>測驗時段登記系統</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              800: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Noto Sans TC', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .cell-selected {
+      background-color: #ecfdf5;
+      border-color: #34d399;
+      color: #065f46;
+    }
+    .cell-selected:hover {
+      background-color: #d1fae5;
+    }
+    .cell-blank {
+      background-color: #ffffff;
+      border-color: #e2e8f0;
+      color: #94a3b8;
+    }
+    .cell-blank:hover {
+      background-color: #f8fafc;
+    }
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      body {
+        background: white;
+      }
+    }
+  </style>
+  <!-- Firebase SDKs (Compat v10.8.0 for standalone zero-build deployment) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- ==================== 頂部全域導航列 ==================== -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- 系統名稱與主題標題 -->
+      <div class="flex items-center space-x-3 overflow-hidden">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div class="truncate">
+          <div class="flex items-center space-x-2">
+            <h1 id="headerThemeTitle" class="text-base sm:text-lg font-bold text-slate-900 truncate">測驗時段填報系統</h1>
+            <span id="roleBadge" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800">
+              未登入
+            </span>
+          </div>
+          <p id="headerSubtitle" class="text-xs text-slate-500 truncate">班級時段登記</p>
+        </div>
+      </div>
+
+      <!-- 右側功能區塊 -->
+      <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+        <!-- 登入資訊（當有登入身分時顯示） -->
+        <!-- 雲端資料庫連線狀態指示徽章 -->
+        <div id="cloudSyncBadge" class="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs" title="Firebase Firestore 資料庫連線狀態">
+          <span id="cloudSyncDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="cloudSyncText">雲端同步 (timeslot-b0553)</span>
+        </div>
+
+        <div id="userInfoArea" class="hidden items-center space-x-2 bg-slate-100 py-1 px-3 rounded-lg text-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="userDisplayName" class="font-medium text-slate-700"></span>
+          <button id="btnLogout" class="text-xs text-rose-600 hover:text-rose-800 ml-1 font-semibold underline">
+            登出
+          </button>
+        </div>
+
+        <!-- 導師登入按鈕（未登入時顯示） -->
+        <button id="btnOpenTeacherLogin" class="hidden items-center space-x-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+          </svg>
+          <span>導師登入</span>
+        </button>
+
+        <!-- 管理者圖示入口（完全無多餘文字提示） -->
+        <button id="btnAdminIcon" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="系統管理" aria-label="系統管理">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== 主內容區域 ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- 視圖 1：未登入首頁 / 歡迎頁 -->
+    <div id="viewGuest" class="py-12 sm:py-20 flex flex-col items-center justify-center text-center">
+      <div class="w-20 h-20 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center mb-6 shadow-inner">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+        </svg>
+      </div>
+      <h2 id="guestThemeTitle" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+        測驗時段填報系統
+      </h2>
+      <p id="guestThemeDesc" class="text-slate-600 max-w-xl mx-auto mb-8 text-sm sm:text-base leading-relaxed">
+        歡迎各位班級導師。請輸入您的班級代號登入，登記貴班節次時段，以便教務處與輔導室順利安排施測。
+      </p>
+
+      <!-- 快捷登入卡片 -->
+      <div class="w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200">
+        <h3 class="text-lg font-bold text-slate-800 mb-4 text-left flex items-center">
+          <span class="w-1.5 h-5 bg-sky-600 rounded mr-2"></span>
+          班級導師登入
+        </h3>
+        <form id="formTeacherLoginQuick" class="space-y-4">
+          <div>
+            <label for="inputClassCodeQuick" class="block text-sm font-semibold text-slate-700 text-left mb-1">
+              班級代號
+            </label>
+            <input type="text" id="inputClassCodeQuick" inputmode="numeric" maxlength="4" autocomplete="off"
+                   class="w-full px-4 py-3 text-lg font-mono text-center tracking-widest border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition" />
+          </div>
+          <button type="submit" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow transition duration-150 flex items-center justify-center space-x-2">
+            <span>進入登記介面</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 視圖 2：導師填報介面 -->
+    <div id="viewTeacher" class="hidden space-y-6">
+      
+      <!-- 鎖定免填報警示橫幅 -->
+      <div id="bannerClassLocked" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center space-x-3 text-amber-900 shadow-2xs">
+        <div class="p-2 bg-amber-100 rounded-xl text-amber-700 flex-shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="font-bold text-sm">本班經管理者設定為「免填報班級」</div>
+          <div class="text-xs text-amber-700 mt-0.5">貴班無須參加或登記本次測驗之實施時段，課表目前為鎖定唯讀狀態。如需變更請聯繫管理員。</div>
+        </div>
+      </div>
+
+      <!-- 開放日期區間狀態提醒橫幅 -->
+      <div id="bannerDateRangeNotice" class="hidden rounded-2xl p-4 flex items-center space-x-3 shadow-2xs">
+        <div id="bannerDateRangeIcon" class="p-2 rounded-xl flex-shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <div id="bannerDateRangeTitle" class="font-bold text-sm"></div>
+          <div id="bannerDateRangeDesc" class="text-xs mt-0.5"></div>
+        </div>
+      </div>
+
+      <!-- 頂部資訊與控制列 -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2 mb-1">
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-sky-100 text-sky-800" id="currentClassTag">三年二班 (302)</span>
+            <span id="tagClassLocked" class="hidden px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">🔒 免填報 (已鎖定)</span>
+            <span class="text-xs text-slate-400">|</span>
+            <span class="text-xs text-slate-500" id="teacherCurrentTheme">主題載入中</span>
+            <span id="teacherDateRangeBadge" class="hidden px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200"></span>
+          </div>
+          <h2 class="text-xl font-bold text-slate-900 flex items-center">
+            登記時段
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5" id="teacherGuideSubtitle">
+            點選單元格即可標記，再次點選或清除即可恢復空白。
+          </p>
+          <!-- 施測注意事項公告區（解決注意事項未顯示問題） -->
+          <div id="teacherThemeNoticeBox" class="hidden mt-3 p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-start space-x-2 shadow-2xs">
+            <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <span class="font-bold text-amber-950">注意事項：</span>
+              <span id="teacherThemeNoticeText" class="text-amber-800 leading-relaxed"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 週次切換控制器（真實日期） -->
+        <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto">
+          <button id="btnPrevWeek" class="p-2 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition" title="上一週">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          
+          <div class="text-center px-3 min-w-[200px]">
+            <div id="weekRangeLabel" class="text-sm font-bold text-slate-800">2026/11/02 ~ 2026/11/06</div>
+            <div id="weekRelativeLabel" class="text-xs text-sky-600 font-medium">第 10 週 (本週)</div>
+          </div>
+
+          <button id="btnNextWeek" class="p-2 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition" title="下一週">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+
+          <button id="btnCurrentWeek" class="ml-1 px-2.5 py-1 text-xs font-semibold bg-white text-slate-700 hover:text-sky-600 border border-slate-200 rounded-lg shadow-2xs transition">
+            本週
+          </button>
+        </div>
+      </div>
+
+      <!-- 快速操作輔助列：依需求將全選早休、全選午休、清除所有選項按鈕往左移動至圖例右邊 -->
+      <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <!-- 左側區域：可施測（點選標記）圖例 + 往左移動至其右側之操作按鈕群 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- 狀態圖例（自訂標記圖例） -->
+          <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+            <span class="w-3.5 h-3.5 rounded border border-emerald-400 bg-emerald-100"></span>
+            <span id="legendAvailableText" class="text-xs font-bold text-emerald-800">可施測（點選標記）</span>
+          </div>
+
+          <!-- 非開放日圖例 -->
+          <div class="hidden sm:flex items-center space-x-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-500 text-xs">
+            <span class="w-3.5 h-3.5 rounded border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">－</span>
+            <span>非開放日 (不可標記)</span>
+          </div>
+
+          <button id="btnSetMorningAvailable" class="px-3 py-1.5 text-xs text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition font-semibold flex items-center space-x-1">
+            <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <span>全選早休</span>
+          </button>
+          
+          <button id="btnSetLunchAvailable" class="px-3 py-1.5 text-xs text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg transition font-semibold flex items-center space-x-1">
+            <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+            <span>全選午休</span>
+          </button>
+
+          <button id="btnClearAllOptions" class="px-3 py-1.5 text-xs text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition font-medium">
+            清除所有選項
+          </button>
+        </div>
+
+        <!-- 右側區域：儲存按鈕與修改提醒 -->
+        <div class="flex flex-wrap items-center gap-2" id="teacherActionButtonsArea">
+          <!-- 修改提醒標籤 -->
+          <span id="saveStatusNotice" class="hidden text-xs font-bold text-amber-700 bg-amber-50 border border-amber-300 px-2.5 py-1.5 rounded-lg flex items-center space-x-1 shadow-2xs animate-pulse">
+            <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <span>有修改需再點選一次確認送出儲存</span>
+          </span>
+
+          <!-- 儲存按鈕 -->
+          <button id="btnSaveSchedule" class="px-4 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+            <svg id="saveBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span id="saveBtnText">確認送出儲存</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 週時段課表網格 -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-center">
+            <thead>
+              <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700">
+                <th class="py-3.5 px-3 font-semibold text-xs text-slate-500 w-32 uppercase tracking-wider border-r border-slate-200">
+                  節次 / 時間
+                </th>
+                <!-- 週一至週五表頭（動態填入真實日期） -->
+                <th id="thDay1" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                  <div class="text-slate-800">週一</div>
+                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay1">11/02</div>
+                </th>
+                <th id="thDay2" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                  <div class="text-slate-800">週二</div>
+                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay2">11/03</div>
+                </th>
+                <th id="thDay3" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                  <div class="text-slate-800">週三</div>
+                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay3">11/04</div>
+                </th>
+                <th id="thDay4" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                  <div class="text-slate-800">週四</div>
+                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay4">11/05</div>
+                </th>
+                <th id="thDay5" class="py-3.5 px-2 font-bold text-sm min-w-[130px]">
+                  <div class="text-slate-800">週五</div>
+                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay5">11/06</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="scheduleTableBody" class="divide-y divide-slate-200">
+              <!-- 動態生成課表節次 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 導師填寫備註卡片 -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <label for="textareaClassNote" class="block text-sm font-bold text-slate-800 mb-1">
+          導師補充備註（選填）
+        </label>
+        <p class="text-xs text-slate-500 mb-2">
+          若有其他排程考量（例如：某日校外教學全日無法測驗、大型比賽等），可於此補充說明。
+        </p>
+        <textarea id="textareaClassNote" rows="2"
+                  class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
+                  placeholder="請在此輸入備註說明..."></textarea>
+      </div>
+
+    </div>
+
+    <!-- 視圖 3：管理員介面 -->
+    <div id="viewAdmin" class="hidden space-y-6">
+
+      <!-- 管理者頂部工具列 -->
+      <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-xs font-bold tracking-wide">
+              ADMIN CONSOLE
+            </span>
+            <span class="text-xs text-slate-400">管理者控制台</span>
+          </div>
+          <h2 class="text-2xl font-bold tracking-tight mt-1 text-white">測驗排程與主題管理</h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            預先顯示現有主題列表，點選「統計」按鈕即可在該主題下方展開統計與各班名單。
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button id="btnAdminExportCSV" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            <span>匯出填報總表 (CSV)</span>
+          </button>
+          <button id="btnAdminExit" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold transition">
+            返回使用者畫面
+          </button>
+        </div>
+      </div>
+
+      <!-- 雲端資料庫狀態面板 (Firebase Firestore) -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4.686 19.364L10.37 3.393a.96.96 0 011.802.046l2.584 7.214-5.26 9.873a.96.96 0 01-1.31.39l-3.5-1.552zm15.748-3.087l-2.023-3.79-2.73-5.114a.96.96 0 00-1.745.105L12.5 12.06l3.54 6.643 3.655-1.623a.96.96 0 00.739-.803z"/>
+              <path d="M9.496 20.552l5.12-9.61 2.213 4.148-7.333 5.462z" opacity=".2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h4 class="font-bold text-sm text-slate-800">Firebase Cloud Firestore 資料庫</h4>
+              <span id="adminCloudStatusTag" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ● 雲端連線中
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              專案 ID：<code class="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">timeslot-b0553</code> ｜ 各班登記、主題設定與免填名單均即時雙向雲端同步
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="btnManualCloudSync" class="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span>立即重新同步雲端</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 管理者主區塊：預先只顯示「現有主題列表」與「新增主題」按鈕 -->
+      <div id="tabContentTheme" class="space-y-6">
+        
+        <!-- 主要卡片：現有主題列表（含新增主題按鈕） -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <h3 class="text-base sm:text-lg font-bold text-slate-800">現有主題列表</h3>
+                <span id="themeCountBadge" class="px-2.5 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-lg">共 1 個主題</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">
+                點擊主題旁之「統計」按鈕將直接於該主題下方展開全校統計與各班填報進度；當前使用主題為獨立功能，不與統計按鈕連動。
+              </p>
+            </div>
+            
+            <!-- 預先顯示新增主題按鈕 -->
+            <button id="btnOpenAddThemeModal" type="button" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center space-x-1.5 flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              <span>新增主題</span>
+            </button>
+          </div>
+
+          <!-- 主題清單容器（動態渲染主題項目，包含編輯按鈕、統計按鈕） -->
+          <div id="themeListTableContainer" class="space-y-4">
+            <!-- 各主題卡片 -->
+          </div>
+        </div>
+
+        <!-- 統計面板安全駐留容器（確保 statsPanel 在清空主題列表時永遠安全存在，不會被摧毀！） -->
+        <div id="statsPanelSafeHolder" class="hidden">
+          <div id="themeInlineStatsPanel" class="mt-4 p-5 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-indigo-200 shadow-sm space-y-5">
+            
+            <!-- 面板內部切換導航按鈕（保持結構完整性，並讓管理員可於面板內快速切換檢視） -->
+            <div class="border-b border-slate-200 flex space-x-4 text-xs font-bold text-slate-600 pb-2">
+              <button id="tabBtnHeatmap" class="text-indigo-600 border-b-2 border-indigo-600 pb-1.5 transition flex items-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <span>全校時段可施測統計表</span>
+              </button>
+              <button id="tabBtnClasses" class="text-slate-500 hover:text-indigo-600 pb-1.5 transition flex items-center space-x-1.5 border-b-2 border-transparent">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                <span>各班填報進度清單 (36班)</span>
+              </button>
+              <button id="tabBtnTheme" class="hidden">主題列表管理</button>
+            </div>
+
+            <!-- 子區塊 1：全校時段可施測統計表 -->
+            <div id="tabContentHeatmap" class="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 class="text-sm sm:text-base font-bold text-slate-800 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-emerald-600 mr-2"></span>
+                    <span id="heatmapHeaderTitle">全校時段可施測班級統計表</span>
+                  </h4>
+                  <p class="text-xs text-slate-500 mt-0.5" id="heatmapHeaderDesc">
+                    數字代表該時段勾選之班級數量，綠色愈深代表可施測的班級愈多。
+                  </p>
+                </div>
+
+                <!-- 年級篩選器 -->
+                <div class="flex items-center space-x-2">
+                  <label for="selectHeatmapGrade" class="text-xs font-semibold text-slate-600">年級篩選：</label>
+                  <select id="selectHeatmapGrade" class="px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white outline-none">
+                    <option value="all">全校 (1~6年級 共36班)</option>
+                    <option value="1">一年級 (101~106)</option>
+                    <option value="2">二年級 (201~206)</option>
+                    <option value="3">三年級 (301~306)</option>
+                    <option value="4">四年級 (401~406)</option>
+                    <option value="5">五年級 (501~506)</option>
+                    <option value="6">六年級 (601~606)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 熱力圖表格 -->
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-center">
+                  <thead>
+                    <tr class="bg-slate-100 text-slate-700 text-xs">
+                      <th class="py-2.5 px-3 w-32 border-r border-slate-200 text-left">節次 / 時間</th>
+                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay1">週一 (<span id="hmDate1">11/02</span>)</th>
+                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay2">週二 (<span id="hmDate2">11/03</span>)</th>
+                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay3">週三 (<span id="hmDate3">11/04</span>)</th>
+                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay4">週四 (<span id="hmDate4">11/05</span>)</th>
+                      <th class="py-2.5 px-2" id="hmThDay5">週五 (<span id="hmDate5">11/06</span>)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="heatmapTableBody" class="divide-y divide-slate-200 text-xs">
+                    <!-- 動態填入統計圖 -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- 色階說明 -->
+              <div class="flex items-center justify-end space-x-2 text-[11px] text-slate-500">
+                <span id="heatmapLegendLabel">標記班級數：</span>
+                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">0班 (無人勾選)</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">1~5班</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">6~15班</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold">16班以上 (高度適配)</span>
+              </div>
+            </div>
+
+            <!-- 子區塊 2：各班填報進度清單 (36班) -->
+            <div id="tabContentClasses" class="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 class="text-sm sm:text-base font-bold text-slate-800 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-indigo-600 mr-2"></span>
+                    各班填報進度清單 (36班)
+                  </h4>
+                  <p class="text-xs text-slate-500 mt-0.5" id="completionRateText">
+                    已完成填報：0 / 36 班 (0%)
+                  </p>
+                </div>
+                <!-- 進度條 -->
+                <div class="w-full sm:w-56 bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+                  <div id="progressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+              </div>
+
+              <!-- 說明提示 -->
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-600 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span>點擊班級卡片之「<strong>鎖定免填</strong>」可設定該班免填；或點擊年級標題旁按鈕進行全學年免填切換。</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[10px]">🔒免填</span>
+                  <span class="px-1.5 py-0.5 rounded text-slate-900 font-bold text-[10px]" style="background-color: #95CACA; border: 1px solid #6ea9a9;">✓已填</span>
+                  <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-300 text-[10px]">未填</span>
+                </div>
+              </div>
+
+              <!-- 年級卡片清單網格 -->
+              <div id="classListContainer" class="space-y-3">
+                <!-- 動態渲染 1~6 年級卡片 -->
+              </div>
+            </div>
+
+            <!-- 子區塊 3：導師補充備註統計彙整（解決導師補充備註未列入統計問題） -->
+            <div id="statsNotesContainer" class="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="text-sm sm:text-base font-bold text-slate-800 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-sky-600 mr-2"></span>
+                    導師補充備註彙整清單
+                  </h4>
+                  <p class="text-xs text-slate-500 mt-0.5">
+                    統整各班導師登記時填寫之特殊排程考量、調課或校外教學說明。
+                  </p>
+                </div>
+                <span id="notesCountBadge" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">0 則備註</span>
+              </div>
+              <div id="classNotesTableArea" class="divide-y divide-slate-100 text-xs">
+                <!-- 動態填入備註清單 -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 資料維護功能 -->
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+          <div>
+            <span>如需清空當前使用中主題之所有班級填報資料，可點選右方按鈕。</span>
+          </div>
+          <div>
+            <button id="btnClearCurrentThemeData" class="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition">
+              清空當前主題之填報紀錄
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== 彈出視窗 1：導師登入彈窗 ==================== -->
+  <div id="modalTeacherLogin" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center">
+          <span class="w-1.5 h-4 bg-sky-600 rounded mr-2"></span>
+          班級導師身分驗證
+        </h3>
+        <button id="btnCloseTeacherModal" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <form id="formTeacherLoginModal" class="space-y-4">
+        <div>
+          <label for="inputClassCodeModal" class="block text-sm font-semibold text-slate-700 mb-1">
+            班級代號
+          </label>
+          <input type="text" id="inputClassCodeModal" inputmode="numeric" maxlength="4" autocomplete="off"
+                 class="w-full px-4 py-3 text-lg font-mono text-center tracking-widest border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+        </div>
+        <div id="errorTeacherLogin" class="hidden text-xs text-rose-600 font-medium"></div>
+        <button type="submit" class="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow transition">
+          登入系統
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗 2：管理者登入密碼驗證（完全無任何提示） ==================== -->
+  <div id="modalAdminAuth" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">管理者驗證</h3>
+        </div>
+        <button id="btnCloseAdminModal" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="formAdminAuth" class="space-y-4">
+        <div>
+          <label for="inputAdminPassword" class="block text-sm font-semibold text-slate-700 mb-1">
+            管理者密碼
+          </label>
+          <input type="password" id="inputAdminPassword" autocomplete="off"
+                 class="w-full px-4 py-2.5 text-center tracking-widest border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none" />
+        </div>
+        <div id="errorAdminAuth" class="hidden text-xs text-rose-600 font-medium text-center">
+          密碼驗證失敗
+        </div>
+        <div class="flex space-x-2">
+          <button type="button" id="btnCancelAdminAuth" class="w-1/2 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition">
+            取消
+          </button>
+          <button type="submit" class="w-1/2 py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition">
+            確認
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗 3：管理者檢視班級清單彈窗 ==================== -->
+  <div id="modalAdminDetail" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
+      <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+        <h4 id="adminModalTitle" class="text-base font-bold text-slate-900">
+          已勾選班級名單
+        </h4>
+        <button id="btnCloseAdminDetail" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-slate-500">以下為在該時段點選標記之班級：</p>
+        <div id="availableClassList" class="max-h-60 overflow-y-auto space-y-1.5 text-xs">
+          <!-- 動態插入班級名單 -->
+        </div>
+        <div class="text-right pt-2">
+          <button type="button" id="btnCloseAdminDetailBtn" class="px-4 py-1.5 text-xs bg-slate-800 text-white rounded-lg font-semibold">關閉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗 4：管理者新增主題彈窗 ==================== -->
+  <div id="modalAddNewTheme" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">新增測驗主題</h3>
+        </div>
+        <button id="btnCloseAddThemeModal" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="formAddNewTheme" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label for="inputNewThemeTitle" class="block text-xs font-semibold text-slate-700 mb-1">
+              主題名稱 <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="inputNewThemeTitle" required
+                   class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                   placeholder="例如：113學年度 第一學期 第二次定期評量" />
+          </div>
+
+          <div>
+            <label for="inputNewThemeLabel" class="block text-xs font-semibold text-slate-700 mb-1">
+              標記文字 (選填)
+            </label>
+            <input type="text" id="inputNewThemeLabel"
+                   class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                   placeholder="預設：可施測" />
+          </div>
+        </div>
+
+        <div>
+          <label for="inputNewThemeSubtitle" class="block text-xs font-semibold text-slate-700 mb-1">
+            副標題 / 填報說明
+          </label>
+          <input type="text" id="inputNewThemeSubtitle"
+                 class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                 placeholder="例如：請勾選各班可施測時段，點選即為標記" />
+        </div>
+
+        <!-- 指定開放選填日期區間 -->
+        <div class="space-y-1.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="inputNewThemeStartDate" class="block text-xs font-semibold text-slate-700 mb-1">
+                開放選填起始日期 (選填)
+              </label>
+              <input type="date" id="inputNewThemeStartDate"
+                     class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white" />
+            </div>
+            <div>
+              <label for="inputNewThemeEndDate" class="block text-xs font-semibold text-slate-700 mb-1">
+                開放選填截止日期 (選填)
+              </label>
+              <input type="date" id="inputNewThemeEndDate"
+                     class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white" />
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-500">
+            💡 說明：僅此日期範圍內的課表日期開放導師點選標記，範圍之外的日期將鎖定為不可點選。
+          </p>
+        </div>
+
+        <div>
+          <label for="textareaNewThemeNotice" class="block text-xs font-semibold text-slate-700 mb-1">
+            公告給導師之注意事項
+          </label>
+          <textarea id="textareaNewThemeNotice" rows="2"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    placeholder="例如：請各班導師於本週五放學前完成登記，以利排考小組排定測驗時間。"></textarea>
+        </div>
+
+        <div class="pt-2 flex justify-end space-x-2 border-t border-slate-100">
+          <button type="button" id="btnCancelAddThemeModal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+            取消
+          </button>
+          <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center space-x-1">
+            <span>新增並啟用此主題</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 彈出視窗 5：管理者編輯主題彈窗 ==================== -->
+  <div id="modalEditTheme" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">編輯主題內容</h3>
+        </div>
+        <button id="btnCloseEditThemeModal" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="formEditCurrentTheme" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label for="inputEditThemeTitle" class="block text-xs font-semibold text-slate-700 mb-1">
+              主題名稱 <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="inputEditThemeTitle" required
+                   class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+          </div>
+
+          <div>
+            <label for="inputEditThemeLabel" class="block text-xs font-semibold text-slate-700 mb-1">
+              標記文字
+            </label>
+            <input type="text" id="inputEditThemeLabel"
+                   class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none font-semibold text-emerald-800"
+                   placeholder="預設：可施測" />
+          </div>
+        </div>
+
+        <div>
+          <label for="inputEditThemeSubtitle" class="block text-xs font-semibold text-slate-700 mb-1">
+            副標題 / 填報說明
+          </label>
+          <input type="text" id="inputEditThemeSubtitle"
+                 class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+        </div>
+
+        <!-- 指定開放選填日期區間 -->
+        <div class="space-y-1.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="inputEditThemeStartDate" class="block text-xs font-semibold text-slate-700 mb-1">
+                開放選填起始日期 (選填)
+              </label>
+              <input type="date" id="inputEditThemeStartDate"
+                     class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-white" />
+            </div>
+            <div>
+              <label for="inputEditThemeEndDate" class="block text-xs font-semibold text-slate-700 mb-1">
+                開放選填截止日期 (選填)
+              </label>
+              <input type="date" id="inputEditThemeEndDate"
+                     class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-white" />
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-500">
+            💡 說明：僅此日期範圍內的課表日期開放導師點選標記，範圍之外的日期將鎖定為不可點選。
+          </p>
+        </div>
+
+        <div>
+          <label for="textareaEditThemeNotice" class="block text-xs font-semibold text-slate-700 mb-1">
+            公告給導師之注意事項
+          </label>
+          <textarea id="textareaEditThemeNotice" rows="2"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex justify-end space-x-2 border-t border-slate-100">
+          <button type="button" id="btnCancelEditThemeModal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+            取消
+          </button>
+          <button type="submit" id="btnSaveCurrentTheme" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center space-x-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>儲存當前主題修改</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 浮動通知提示 (Toast) -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 text-sm font-medium">
+      <svg id="toastIcon" class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      <span id="toastMessage">儲存成功</span>
+    </div>
+  </div>
+
+  <!-- ==================== 系統 JavaScript 核心邏輯 ==================== -->
+  <script>
+    (function() {
+      const GRADES = [1, 2, 3, 4, 5, 6];
+      const CLASSES_PER_GRADE = 6;
+      const ADMIN_PASSWORD = "0000";
+
+      // 節次定義：依據校長課表作息時間調整
+      const PERIODS = [
+        { id: "p0", name: "早自修", time: "7:50 ~ 8:30", type: "morning" },
+        { id: "p1", name: "第一節", time: "8:40 ~ 9:20", type: "class" },
+        { id: "p2", name: "第二節", time: "9:30 ~ 10:10", type: "class" },
+        { id: "p3", name: "第三節", time: "10:25 ~ 11:05", type: "class" },
+        { id: "p4", name: "第四節", time: "11:15 ~ 11:55", type: "class" },
+        { id: "p_lunch", name: "午休時段", time: "12:40 ~ 13:20", type: "lunch" },
+        { id: "p5", name: "第五節", time: "13:30 ~ 14:10", type: "class" },
+        { id: "p6", name: "第六節", time: "14:20 ~ 15:00", type: "class" },
+        { id: "p7", name: "第七節", time: "15:20 ~ 16:00", type: "class" },
+      ];
+
+      // 產生所有有效班級代號清單 (如 101~106 ... 601~606)
+      const ALL_CLASSES = [];
+      GRADES.forEach(g => {
+        for (let c = 1; c <= CLASSES_PER_GRADE; c++) {
+          const code = `${g}0${c}`;
+          ALL_CLASSES.push({
+            code: code,
+            grade: g,
+            number: c,
+            name: `${['一', '二', '三', '四', '五', '六'][g - 1]}年${['一', '二', '三', '四', '五', '六'][c - 1]}班`
+          });
+        }
+      });
+
+      // 預設主題種子清單
+      const DEFAULT_THEMES = [
+        {
+          id: "theme_default_1",
+          title: "113學年度 第一學期 學生學習成效與心智評量測驗",
+          subtitle: "班級時段登記（選項預設空白，點選即為標記）",
+          notice: "敬請各位導師點選貴班可施測之時段，未點選時段預設保持空白。",
+          availableLabel: "可施測",
+          startDate: "2026-11-02",
+          endDate: "2026-11-06"
+        }
+      ];
+
+      // 狀態管理物件
+      const state = {
+        currentUser: null,       // { role: 'teacher'|'admin', classCode: '101', className: '一年一班' }
+        currentDate: new Date(), // 當前檢視的日期 (預設今天)
+        
+        // 主題管理列表與當前啟用主題 ID
+        themes: DEFAULT_THEMES,
+        activeThemeId: "theme_default_1",   // 當前使用主題（獨立功能，供導師端填報）
+        viewingStatsThemeId: null,          // 點選統計按鈕時於該主題下方展開的主題 ID（獨立功能，絕不連動使用主題）
+        editingThemeId: null,               // 當前正在編輯的主題 ID
+
+        // 各主題對應之填報資料：{ [themeId]: { [classCode]: { submitted: false, updateTime: '', note: '', availableSlots: {} } } }
+        themeRecords: {},
+
+        // 各主題對應之「鎖定免填報」班級代號清單：{ [themeId]: { [classCode]: true } }
+        themeLockedClasses: {},
+
+        // 統計篩選年級狀態
+        statsFilterGrade: 'all',
+
+        // 追蹤導師端自上次儲存後是否有修改
+        isModifiedSinceSave: false
+      };
+
+      
+      // ====================================================
+      // Firebase Cloud Firestore 配置與資料庫連線
+      // 專案：timeslot-b0553
+      // ====================================================
+      const firebaseConfig = {
+        apiKey: "AIzaSyDJwqU_AKuF6QYMGpVL5nqbMy6UiW80w9U",
+        authDomain: "timeslot-b0553.firebaseapp.com",
+        projectId: "timeslot-b0553",
+        storageBucket: "timeslot-b0553.firebasestorage.app",
+        messagingSenderId: "733291371525",
+        appId: "1:733291371525:web:4a88a33d784a4f8866506c",
+        measurementId: "G-134KXH4RHH"
+      };
+
+      let db = null;
+      let firebaseAnalytics = null;
+      let isFirestoreReady = false;
+
+      function updateCloudSyncBadge(isOnline, message) {
+        const badge = document.getElementById('cloudSyncBadge');
+        const text = document.getElementById('cloudSyncText');
+        const dot = document.getElementById('cloudSyncDot');
+        const adminTag = document.getElementById('adminCloudStatusTag');
+
+        if (badge && text) {
+          badge.classList.remove('hidden');
+          if (isOnline) {
+            badge.className = "hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            text.textContent = message || "雲端同步 (timeslot-b0553)";
+          } else {
+            badge.className = "hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400";
+            text.textContent = message || "本機模式 (離線暫存)";
+          }
+        }
+
+        if (adminTag) {
+          if (isOnline) {
+            adminTag.className = "px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+            adminTag.textContent = "● 已連線 (即時同步中)";
+          } else {
+            adminTag.className = "px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200";
+            adminTag.textContent = "○ 本機暫存 (待連線)";
+          }
+        }
+      }
+
+      function initFirebase() {
+        if (typeof firebase === 'undefined') {
+          console.warn("Firebase SDK 未載入，進入本機儲存模式 (localStorage)");
+          updateCloudSyncBadge(false, "本機儲存模式");
+          return;
+        }
+
+        try {
+          if (!firebase.apps || !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+          }
+          if (typeof firebase.analytics === 'function') {
+            try {
+              firebaseAnalytics = firebase.analytics();
+            } catch (e) {
+              console.log("Firebase Analytics 初始化略過:", e);
+            }
+          }
+          db = firebase.firestore();
+          updateCloudSyncBadge(true, "雲端連線中...");
+          setupFirestoreRealtimeListeners();
+        } catch (e) {
+          console.warn("Firebase 初始化異常，使用本機模式:", e);
+          updateCloudSyncBadge(false, "本機儲存模式");
+        }
+      }
+
+      function setupFirestoreRealtimeListeners() {
+        if (!db) return;
+
+        // 1. 監聽全局設定 (例如當前啟用主題 ID)
+        db.collection('timeslot_config').doc('active').onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (data && data.activeThemeId && state.themes.some(t => t.id === data.activeThemeId)) {
+              if (state.activeThemeId !== data.activeThemeId) {
+                state.activeThemeId = data.activeThemeId;
+                saveData();
+                updateView();
+              }
+            }
+          } else {
+            // 初次建立雲端設定文件
+            db.collection('timeslot_config').doc('active').set({
+              activeThemeId: state.activeThemeId,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(console.warn);
+          }
+        }, err => {
+          console.warn("Firestore config listener error:", err);
+          updateCloudSyncBadge(false, "權限待開通 (本機暫存)");
+        });
+
+        // 2. 監聽主題清單
+        db.collection('timeslot_themes').onSnapshot(snapshot => {
+          if (!snapshot.empty) {
+            const cloudThemes = [];
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              cloudThemes.push({
+                id: doc.id,
+                title: data.title || '',
+                subtitle: data.subtitle || '',
+                notice: data.notice || '',
+                availableLabel: data.availableLabel || '可施測',
+                startDate: data.startDate || '',
+                endDate: data.endDate || ''
+              });
+              if (data.lockedClasses) {
+                state.themeLockedClasses[doc.id] = data.lockedClasses;
+              }
+            });
+            if (cloudThemes.length > 0) {
+              state.themes = cloudThemes;
+              if (!state.themes.some(t => t.id === state.activeThemeId)) {
+                state.activeThemeId = state.themes[0].id;
+              }
+              saveData();
+              if (state.currentUser && state.currentUser.role === 'admin') {
+                renderThemeList();
+              } else if (state.currentUser && state.currentUser.role === 'teacher') {
+                updateView();
+              }
+            }
+          } else {
+            // 初次為空時，將預設主題推播至雲端
+            state.themes.forEach(th => {
+              db.collection('timeslot_themes').doc(th.id).set({
+                ...th,
+                lockedClasses: state.themeLockedClasses[th.id] || {},
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              }).catch(console.warn);
+            });
+          }
+          isFirestoreReady = true;
+          updateCloudSyncBadge(true, "雲端已同步 (timeslot-b0553)");
+        }, err => {
+          console.warn("Firestore themes listener error:", err);
+          updateCloudSyncBadge(false, "請開啟 Firestore 規則");
+        });
+
+        // 3. 監聽各班填報資料 (所有班級即時連動)
+        db.collection('timeslot_submissions').onSnapshot(snapshot => {
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const themeId = data.themeId;
+            const classCode = data.classCode;
+            if (themeId && classCode) {
+              if (!state.themeRecords[themeId]) {
+                state.themeRecords[themeId] = {};
+              }
+              state.themeRecords[themeId][classCode] = {
+                submitted: Boolean(data.submitted),
+                updateTime: data.updateTime || '',
+                note: data.note || '',
+                availableSlots: data.availableSlots || {}
+              };
+            }
+          });
+          saveData();
+          if (state.currentUser && state.currentUser.role === 'teacher') {
+            renderTeacherSchedule();
+            updateSaveButtonStatus();
+          } else if (state.currentUser && state.currentUser.role === 'admin') {
+            renderThemeList();
+          }
+        }, err => {
+          console.warn("Firestore submissions listener error:", err);
+        });
+      }
+
+      function syncSubmissionToFirestore(themeId, classCode, classData) {
+        if (!db) return;
+        const submissionDocId = `${themeId}_${classCode}`;
+        db.collection('timeslot_submissions').doc(submissionDocId).set({
+          themeId: themeId,
+          classCode: classCode,
+          className: state.currentUser ? state.currentUser.className : '',
+          submitted: Boolean(classData.submitted),
+          updateTime: classData.updateTime || new Date().toLocaleString(),
+          note: classData.note || '',
+          availableSlots: classData.availableSlots || {},
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).then(() => {
+          showToast("已成功送出儲存，並同步至雲端資料庫！");
+        }).catch(err => {
+          console.warn("雲端同步失敗:", err);
+          showToast("已儲存於本機（雲端同步暫時離線）");
+        });
+      }
+
+      function syncThemeToFirestore(theme) {
+        if (!db) return;
+        db.collection('timeslot_themes').doc(theme.id).set({
+          id: theme.id,
+          title: theme.title,
+          subtitle: theme.subtitle,
+          notice: theme.notice,
+          availableLabel: theme.availableLabel,
+          startDate: theme.startDate,
+          endDate: theme.endDate,
+          lockedClasses: state.themeLockedClasses[theme.id] || {},
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(console.warn);
+      }
+
+      function deleteThemeFromFirestore(themeId) {
+        if (!db) return;
+        db.collection('timeslot_themes').doc(themeId).delete().catch(console.warn);
+      }
+
+      function syncActiveThemeToFirestore(themeId) {
+        if (!db) return;
+        db.collection('timeslot_config').doc('active').set({
+          activeThemeId: themeId,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(console.warn);
+      }
+
+      function syncLockedClassesToFirestore(themeId, lockedClasses) {
+        if (!db) return;
+        db.collection('timeslot_themes').doc(themeId).set({
+          lockedClasses: lockedClasses || {}
+        }, { merge: true }).catch(console.warn);
+      }
+
+      const STORAGE_KEY_THEMES = 'exam_scheduler_themes_v10';
+      const STORAGE_KEY_ACTIVE_THEME = 'exam_scheduler_active_theme_v10';
+      const STORAGE_KEY_THEME_RECORDS = 'exam_scheduler_theme_records_v10';
+      const STORAGE_KEY_THEME_LOCKED = 'exam_scheduler_theme_locked_v10';
+      const STORAGE_KEY_USER = 'exam_scheduler_user_session_v10';
+
+      function loadData() {
+        try {
+          const savedThemes = localStorage.getItem(STORAGE_KEY_THEMES);
+          if (savedThemes) {
+            const parsed = JSON.parse(savedThemes);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              state.themes = parsed;
+            }
+          }
+
+          const savedActive = localStorage.getItem(STORAGE_KEY_ACTIVE_THEME);
+          if (savedActive && state.themes.some(t => t.id === savedActive)) {
+            state.activeThemeId = savedActive;
+          } else if (state.themes.length > 0) {
+            state.activeThemeId = state.themes[0].id;
+          }
+
+          const savedRecords = localStorage.getItem(STORAGE_KEY_THEME_RECORDS);
+          if (savedRecords) {
+            state.themeRecords = JSON.parse(savedRecords);
+          } else {
+            state.themeRecords = {};
+          }
+
+          const savedLocked = localStorage.getItem(STORAGE_KEY_THEME_LOCKED);
+          if (savedLocked) {
+            state.themeLockedClasses = JSON.parse(savedLocked);
+          } else {
+            state.themeLockedClasses = {};
+          }
+
+          const user = sessionStorage.getItem(STORAGE_KEY_USER);
+          if (user) {
+            state.currentUser = JSON.parse(user);
+          }
+        } catch (e) {
+          console.error("Storage load error:", e);
+        }
+      }
+
+      function saveData() {
+        try {
+          localStorage.setItem(STORAGE_KEY_THEMES, JSON.stringify(state.themes));
+          localStorage.setItem(STORAGE_KEY_ACTIVE_THEME, state.activeThemeId);
+          localStorage.setItem(STORAGE_KEY_THEME_RECORDS, JSON.stringify(state.themeRecords));
+          localStorage.setItem(STORAGE_KEY_THEME_LOCKED, JSON.stringify(state.themeLockedClasses));
+          if (state.currentUser) {
+            sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(state.currentUser));
+          } else {
+            sessionStorage.removeItem(STORAGE_KEY_USER);
+          }
+        } catch (e) {
+          console.error("Storage save error:", e);
+        }
+      }
+
+      // ----------------------------------------------------
+      // 計算主題開放選填日期狀態
+      // ----------------------------------------------------
+      function isDateInRange(dateStr, theme) {
+        if (!theme) return true;
+        if (theme.startDate && dateStr < theme.startDate) return false;
+        if (theme.endDate && dateStr > theme.endDate) return false;
+        return true;
+      }
+
+      function getThemeDateRangeStatus(theme) {
+        if (!theme.startDate && !theme.endDate) {
+          return {
+            status: 'all',
+            label: '課表登記：全部日期',
+            badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+            isAllowed: true
+          };
+        }
+        return {
+          status: 'ranged',
+          label: `開放標記：${theme.startDate || '起初'} ～ ${theme.endDate || '迄今'}`,
+          badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          isAllowed: true
+        };
+      }
+
+      function getActiveTheme() {
+        const theme = state.themes.find(t => t.id === state.activeThemeId) || state.themes[0] || {
+          id: "theme_fallback",
+          title: "測驗時段填報系統",
+          subtitle: "班級時段登記",
+          notice: "請輸入代號進行登記。",
+          availableLabel: "可施測"
+        };
+        if (!theme.availableLabel) theme.availableLabel = "可施測";
+        return theme;
+      }
+
+      function getThemeRecords(themeId) {
+        if (!state.themeRecords[themeId]) {
+          state.themeRecords[themeId] = {};
+        }
+        return state.themeRecords[themeId];
+      }
+
+      function getThemeLockedClasses(themeId) {
+        if (!state.themeLockedClasses[themeId]) {
+          state.themeLockedClasses[themeId] = {};
+        }
+        return state.themeLockedClasses[themeId];
+      }
+
+      function getMonday(d) {
+        const date = new Date(d);
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(date.setDate(diff));
+      }
+
+      function formatDate(d) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      function formatShortDate(d) {
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${month}/${day}`;
+      }
+
+      function getWeekDays(baseDate) {
+        const monday = getMonday(baseDate);
+        const days = [];
+        for (let i = 0; i < 5; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          days.push(d);
+        }
+        return days;
+      }
+
+      function getWeekNumber(d) {
+        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+      }
+
+      let toastTimer = null;
+      function showToast(msg, isSuccess = true) {
+        const toast = document.getElementById('toastNotification');
+        const toastMsg = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+        
+        toastMsg.textContent = msg;
+        if (isSuccess) {
+          toastIcon.className = "w-5 h-5 text-emerald-400";
+        } else {
+          toastIcon.className = "w-5 h-5 text-rose-400";
+        }
+        
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove('translate-y-0', 'opacity-100');
+          toast.classList.add('translate-y-20', 'opacity-0');
+        }, 2200);
+      }
+
+      function parseClassCode(code) {
+        if (!code) return null;
+        const trimmed = String(code).trim();
+        const found = ALL_CLASSES.find(c => c.code === trimmed);
+        if (found) return found;
+
+        if (/^[1-6]0[1-6]$/.test(trimmed)) {
+          const g = parseInt(trimmed[0], 10);
+          const c = parseInt(trimmed[2], 10);
+          return {
+            code: trimmed,
+            grade: g,
+            number: c,
+            name: `${['一', '二', '三', '四', '五', '六'][g - 1]}年${['一', '二', '三', '四', '五', '六'][c - 1]}班`
+          };
+        }
+        return null;
+      }
+
+      function updateSaveButtonStatus() {
+        const btnSave = document.getElementById('btnSaveSchedule');
+        const btnText = document.getElementById('saveBtnText');
+        const notice = document.getElementById('saveStatusNotice');
+
+        if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+        const classCode = state.currentUser.classCode;
+        const records = getThemeRecords(state.activeThemeId);
+        const classData = records[classCode];
+
+        const isSubmitted = classData && classData.submitted;
+
+        if (isSubmitted && !state.isModifiedSinceSave) {
+          btnSave.className = "px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition flex items-center space-x-1.5";
+          btnText.textContent = "已送出儲存";
+          notice.classList.add('hidden');
+        } else {
+          btnSave.className = "px-4 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition flex items-center space-x-1.5";
+          btnText.textContent = "確認送出儲存";
+
+          if (state.isModifiedSinceSave) {
+            notice.classList.remove('hidden');
+          } else {
+            notice.classList.add('hidden');
+          }
+        }
+      }
+
+      function markDataModified() {
+        state.isModifiedSinceSave = true;
+        updateSaveButtonStatus();
+      }
+
+      // ----------------------------------------------------
+      // 視圖切換管理
+      // ----------------------------------------------------
+      function updateView() {
+        const viewGuest = document.getElementById('viewGuest');
+        const viewTeacher = document.getElementById('viewTeacher');
+        const viewAdmin = document.getElementById('viewAdmin');
+        const roleBadge = document.getElementById('roleBadge');
+        const userInfoArea = document.getElementById('userInfoArea');
+        const btnOpenTeacherLogin = document.getElementById('btnOpenTeacherLogin');
+        const userDisplayName = document.getElementById('userDisplayName');
+
+        const activeTheme = getActiveTheme();
+        const currentLabel = activeTheme.availableLabel || "可施測";
+
+        document.getElementById('headerThemeTitle').textContent = activeTheme.title;
+        document.getElementById('headerSubtitle').textContent = activeTheme.subtitle || '班級時段登記';
+        document.getElementById('guestThemeTitle').textContent = activeTheme.title;
+        document.getElementById('guestThemeDesc').textContent = activeTheme.notice || activeTheme.subtitle || '請輸入班級代號登入登記。';
+
+        document.getElementById('legendAvailableText').textContent = `${currentLabel}（點選標記）`;
+        document.getElementById('teacherGuideSubtitle').textContent = "點選單元格即可標記，再次點選或清除即可恢復空白。";
+
+        // 顯示主題注意事項公告
+        const noticeBox = document.getElementById('teacherThemeNoticeBox');
+        const noticeText = document.getElementById('teacherThemeNoticeText');
+        if (activeTheme.notice && activeTheme.notice.trim() !== '') {
+          noticeText.textContent = activeTheme.notice.trim();
+          noticeBox.classList.remove('hidden');
+        } else {
+          noticeBox.classList.add('hidden');
+        }
+
+        if (!state.currentUser) {
+          viewGuest.classList.remove('hidden');
+          viewTeacher.classList.add('hidden');
+          viewAdmin.classList.add('hidden');
+
+          roleBadge.textContent = '未登入';
+          roleBadge.className = 'hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600';
+          userInfoArea.classList.add('hidden');
+          userInfoArea.classList.remove('flex');
+          btnOpenTeacherLogin.classList.remove('hidden');
+          btnOpenTeacherLogin.classList.add('flex');
+        } else if (state.currentUser.role === 'teacher') {
+          viewGuest.classList.add('hidden');
+          viewTeacher.classList.remove('hidden');
+          viewAdmin.classList.add('hidden');
+
+          roleBadge.textContent = '導師填報中';
+          roleBadge.className = 'hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800';
+          btnOpenTeacherLogin.classList.add('hidden');
+          userInfoArea.classList.remove('hidden');
+          userInfoArea.classList.add('flex');
+          userDisplayName.textContent = `${state.currentUser.className} (${state.currentUser.classCode})`;
+
+          document.getElementById('currentClassTag').textContent = `${state.currentUser.className} (${state.currentUser.classCode})`;
+          document.getElementById('teacherCurrentTheme').textContent = activeTheme.title;
+
+          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          const isLocked = Boolean(lockedClasses[state.currentUser.classCode]);
+          const bannerLocked = document.getElementById('bannerClassLocked');
+          const tagLocked = document.getElementById('tagClassLocked');
+          const actionButtons = document.getElementById('teacherActionButtonsArea');
+          const noteTextarea = document.getElementById('textareaClassNote');
+
+          // 檢查開放選填日期區間標籤
+          const bannerDate = document.getElementById('bannerDateRangeNotice');
+          const dateRangeBadge = document.getElementById('teacherDateRangeBadge');
+
+          if (activeTheme.startDate || activeTheme.endDate) {
+            dateRangeBadge.classList.remove('hidden');
+            dateRangeBadge.textContent = `📅 開放選填日期範圍：${activeTheme.startDate || '即日起'} ～ ${activeTheme.endDate || '無期限'}（僅此區間內課表可點選標記）`;
+          } else {
+            dateRangeBadge.classList.add('hidden');
+          }
+
+          if (isLocked) {
+            bannerLocked.classList.remove('hidden');
+            tagLocked.classList.remove('hidden');
+            bannerDate.classList.add('hidden');
+            actionButtons.classList.add('opacity-50', 'pointer-events-none');
+            noteTextarea.disabled = true;
+          } else {
+            bannerLocked.classList.add('hidden');
+            tagLocked.classList.add('hidden');
+            actionButtons.classList.remove('opacity-50', 'pointer-events-none');
+            noteTextarea.disabled = false;
+          }
+
+          const records = getThemeRecords(state.activeThemeId);
+          const classRecord = records[state.currentUser.classCode] || { availableSlots: {}, note: '' };
+          noteTextarea.value = classRecord.note || '';
+
+          renderTeacherSchedule();
+          updateSaveButtonStatus();
+        } else if (state.currentUser.role === 'admin') {
+          viewGuest.classList.add('hidden');
+          viewTeacher.classList.add('hidden');
+          viewAdmin.classList.remove('hidden');
+
+          roleBadge.textContent = '系統管理員';
+          roleBadge.className = 'hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800';
+          btnOpenTeacherLogin.classList.add('hidden');
+          userInfoArea.classList.remove('hidden');
+          userInfoArea.classList.add('flex');
+          userDisplayName.textContent = '管理員 (已驗證)';
+
+          renderThemeList();
+        }
+      }
+
+      // ----------------------------------------------------
+      // 導師週課表渲染
+      // ----------------------------------------------------
+      function renderTeacherSchedule() {
+        if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+        const classCode = state.currentUser.classCode;
+        const activeTheme = getActiveTheme();
+        const currentLabel = activeTheme.availableLabel || "可施測";
+
+        const records = getThemeRecords(state.activeThemeId);
+        if (!records[classCode]) {
+          records[classCode] = { submitted: false, updateTime: '', note: '', availableSlots: {} };
+        }
+        const classData = records[classCode];
+        if (!classData.availableSlots) classData.availableSlots = {};
+
+        const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+        const isClassLocked = Boolean(lockedClasses[classCode]);
+
+        const weekDays = getWeekDays(state.currentDate);
+        const monday = weekDays[0];
+        const friday = weekDays[4];
+
+        const rangeText = `${monday.getFullYear()}/${formatShortDate(monday)} ～ ${friday.getFullYear()}/${formatShortDate(friday)}`;
+        document.getElementById('weekRangeLabel').textContent = rangeText;
+
+        const currentWeekNo = getWeekNumber(state.currentDate);
+        const thisWeekNo = getWeekNumber(new Date());
+        let relText = `第 ${currentWeekNo} 週`;
+        if (currentWeekNo === thisWeekNo && state.currentDate.getFullYear() === (new Date()).getFullYear()) {
+          relText += " (本週)";
+        }
+        document.getElementById('weekRelativeLabel').textContent = relText;
+
+        // 檢查本週是否有任何一天在開放選填範圍內
+        const bannerDate = document.getElementById('bannerDateRangeNotice');
+        const hasAnyDayInRange = weekDays.some(day => isDateInRange(formatDate(day), activeTheme));
+        if (activeTheme.startDate || activeTheme.endDate) {
+          if (!hasAnyDayInRange) {
+            bannerDate.classList.remove('hidden');
+            bannerDate.className = "rounded-2xl p-4 flex items-center space-x-3 shadow-2xs bg-amber-50 border border-amber-200 text-amber-900";
+            document.getElementById('bannerDateRangeIcon').className = "p-2 rounded-xl flex-shrink-0 bg-amber-100 text-amber-700";
+            document.getElementById('bannerDateRangeTitle').textContent = "目前週次不在開放選填日期範圍內";
+            document.getElementById('bannerDateRangeDesc').textContent = `本次測驗開放標記區間為 ${activeTheme.startDate || '即日起'} ～ ${activeTheme.endDate || '無期限'}。本週課表皆非開放日期，時段暫無法點選標記，請使用切換週次按鈕切換至開放登記週。`;
+          } else {
+            bannerDate.classList.add('hidden');
+          }
+        } else {
+          bannerDate.classList.add('hidden');
+        }
+
+        // 週課表格頭日期與開放狀態
+        for (let i = 0; i < 5; i++) {
+          const d = weekDays[i];
+          const dateStr = formatDate(d);
+          const inRange = isDateInRange(dateStr, activeTheme);
+          const thDate = document.getElementById(`dateDay${i + 1}`);
+          if (thDate) {
+            if (inRange) {
+              thDate.innerHTML = `<span class="text-slate-800 font-bold">${formatShortDate(d)}</span>`;
+            } else {
+              thDate.innerHTML = `
+                <span class="text-slate-400 font-medium">${formatShortDate(d)}</span>
+                <span class="block text-[10px] text-slate-400 font-normal">非開放</span>
+              `;
+            }
+          }
+        }
+
+        const tbody = document.getElementById('scheduleTableBody');
+        tbody.innerHTML = '';
+
+        PERIODS.forEach(period => {
+          const tr = document.createElement('tr');
+          tr.className = period.type === 'lunch' ? 'bg-slate-50/50' : 'hover:bg-slate-50/30 transition';
+
+          const tdLabel = document.createElement('td');
+          tdLabel.className = 'py-3 px-3 text-xs font-semibold text-slate-700 border-r border-slate-200 bg-slate-50/50';
+          tdLabel.innerHTML = `
+            <div class="font-bold text-slate-800">${period.name}</div>
+            <div class="text-[11px] text-slate-400 font-normal mt-0.5">${period.time}</div>
+          `;
+          tr.appendChild(tdLabel);
+
+          weekDays.forEach((day, dayIndex) => {
+            const dateStr = formatDate(day);
+            const slotKey = `${dateStr}_${period.id}`;
+            const inRange = isDateInRange(dateStr, activeTheme);
+            const isAvailable = Boolean(classData.availableSlots[slotKey]);
+            const td = document.createElement('td');
+
+            if (dayIndex === 4) td.classList.remove('border-r');
+
+            if (isClassLocked) {
+              // 免填班級
+              td.className = 'py-2.5 px-2 border-r border-slate-200 select-none bg-slate-100/70 cursor-not-allowed';
+              if (dayIndex === 4) td.classList.remove('border-r');
+              td.innerHTML = `
+                <div class="h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-slate-100/80 text-slate-400 text-xs font-medium">
+                  <svg class="w-3.5 h-3.5 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                  <span>免填</span>
+                </div>
+              `;
+              td.addEventListener('click', () => {
+                showToast("本班已設定為免填報，無需勾選", false);
+              });
+            } else if (!inRange) {
+              // 非開放選填日期：鎖定且不可點選標記
+              td.className = 'py-2.5 px-2 border-r border-slate-200 select-none bg-slate-50/70 cursor-not-allowed';
+              if (dayIndex === 4) td.classList.remove('border-r');
+              td.innerHTML = `
+                <div class="h-8 flex items-center justify-center rounded-lg border border-slate-200/60 bg-slate-100/50 text-slate-300 text-xs font-normal" title="非開放選填日期 (${dateStr})">
+                  <span>－</span>
+                </div>
+              `;
+              td.addEventListener('click', () => {
+                showToast(`該日期 (${dateStr}) 非本次測驗開放標記範圍 (${activeTheme.startDate || '起初'} ～ ${activeTheme.endDate || '迄今'})，無法點選標記`, false);
+              });
+            } else if (isAvailable) {
+              // 在開放範圍內且已標記
+              td.className = 'py-2.5 px-2 border-r border-slate-200 select-none cursor-pointer transition-all cell-selected';
+              if (dayIndex === 4) td.classList.remove('border-r');
+              td.innerHTML = `
+                <div class="flex items-center justify-center p-2 rounded-lg border border-emerald-400 bg-emerald-100 text-emerald-800 shadow-2xs font-bold text-xs">
+                  <svg class="w-4 h-4 mr-1 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>${currentLabel}</span>
+                </div>
+              `;
+              td.addEventListener('click', () => {
+                delete classData.availableSlots[slotKey];
+                showToast("已清除此時段（恢復空白）");
+                markDataModified();
+                saveData();
+                renderTeacherSchedule();
+              });
+            } else {
+              // 在開放範圍內且尚未標記（空白）
+              td.className = 'py-2.5 px-2 border-r border-slate-200 select-none cursor-pointer transition-all cell-blank';
+              if (dayIndex === 4) td.classList.remove('border-r');
+              td.innerHTML = `
+                <div class="h-8 flex items-center justify-center rounded-lg border border-dashed border-slate-200 text-slate-300 hover:border-slate-300 hover:text-slate-400 transition text-[11px]">
+                  <span>＋</span>
+                </div>
+              `;
+              td.addEventListener('click', () => {
+                classData.availableSlots[slotKey] = true;
+                showToast(`已標記為${currentLabel}`);
+                markDataModified();
+                saveData();
+                renderTeacherSchedule();
+              });
+            }
+
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+
+// ----------------------------------------------------
+      // 管理者現有主題列表渲染
+      // 統計表與各班清單於點選統計按鈕時才顯示於該主題下方！
+      // 當前使用主題為獨立功能，不要與統計按鈕連動！
+      // ----------------------------------------------------
+      function renderThemeList() {
+        const container = document.getElementById('themeListTableContainer');
+        const badge = document.getElementById('themeCountBadge');
+        const statsPanel = document.getElementById('themeInlineStatsPanel');
+        const safeHolder = document.getElementById('statsPanelSafeHolder');
+
+        // 重要安全保護：在清空 container 前，先將 statsPanel 安全移回 safeHolder 隱藏，避免被 innerHTML = '' 銷毀！
+        if (statsPanel && safeHolder && statsPanel.parentElement !== safeHolder) {
+          safeHolder.appendChild(statsPanel);
+          statsPanel.classList.add('hidden');
+        }
+
+        container.innerHTML = '';
+        badge.textContent = `共 ${state.themes.length} 個主題`;
+
+        state.themes.forEach(theme => {
+          const isActive = theme.id === state.activeThemeId;
+          const isViewingStats = state.viewingStatsThemeId === theme.id;
+          const labelText = theme.availableLabel || "可施測";
+
+          const card = document.createElement('div');
+          card.id = `themeCard_${theme.id}`;
+          card.className = `p-4 sm:p-5 rounded-2xl border transition-all ${
+            isActive ? 'border-sky-300 bg-sky-50/20 shadow-2xs' : 'border-slate-200 bg-white hover:border-slate-300'
+          }`;
+
+          card.innerHTML = `
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div class="flex-1">
+                <div class="flex items-center space-x-2">
+                  <h4 class="font-bold text-sm sm:text-base text-slate-900">${theme.title}</h4>
+                  ${isActive ? '<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-sky-600 text-white shadow-2xs">✓ 目前使用中</span>' : ''}
+                  <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">標記：${labelText}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${getThemeDateRangeStatus(theme).badgeClass}">📅 ${getThemeDateRangeStatus(theme).label}</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">${theme.subtitle || '無副標題'}</p>
+                ${theme.notice ? `<p class="text-[11px] text-slate-400 mt-0.5"><span class="font-semibold">注意事項：</span>${theme.notice}</p>` : ''}
+              </div>
+
+              <!-- 操作功能按鈕群 -->
+              <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                
+                <!-- 統計按鈕（點選時展開於該主題下方，獨立功能，不連動使用主題，可重複點擊開啟與收合） -->
+                <button class="btn-theme-stats px-3.5 py-1.5 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 ${
+                  isViewingStats 
+                    ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300' 
+                    : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
+                }" data-id="${theme.id}">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                  <span>${isViewingStats ? '收合統計' : '統計'}</span>
+                </button>
+
+                <!-- 編輯按鈕 -->
+                <button class="btn-edit-theme px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center space-x-1" data-id="${theme.id}" title="編輯此主題">
+                  <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                  <span>編輯</span>
+                </button>
+
+                <!-- 設為使用中按鈕（獨立功能，點選才切換使用中主題） -->
+                ${!isActive ? `
+                  <button class="btn-select-theme px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100/70 hover:bg-sky-200/70 rounded-lg transition" data-id="${theme.id}">
+                    設為使用中
+                  </button>
+                ` : `
+                  <span class="text-xs font-bold text-sky-700 px-3 py-1.5 bg-sky-100 rounded-lg">使用中</span>
+                `}
+
+                <!-- 刪除按鈕 -->
+                <button class="btn-delete-theme px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition" data-id="${theme.id}" title="刪除此主題">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <!-- 統計面板掛載插槽 -->
+            <div id="statsSlot_${theme.id}"></div>
+          `;
+
+          // 綁定「統計」按鈕：於該主題下方展開或收合統計，絕不變更使用主題！
+          card.querySelector('.btn-theme-stats').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const targetId = this.dataset.id;
+            if (state.viewingStatsThemeId === targetId) {
+              state.viewingStatsThemeId = null; // 收合
+            } else {
+              state.viewingStatsThemeId = targetId; // 展開
+            }
+            renderThemeList();
+          });
+
+          // 綁定「編輯」按鈕
+          card.querySelector('.btn-edit-theme').addEventListener('click', function(e) {
+            e.stopPropagation();
+            openEditThemeModal(theme.id);
+          });
+
+          // 綁定「設為使用中」按鈕（獨立功能，點選才切換使用中主題）
+          const btnSelect = card.querySelector('.btn-select-theme');
+          if (btnSelect) {
+            btnSelect.addEventListener('click', function(e) {
+              e.stopPropagation();
+              state.activeThemeId = this.dataset.id;
+              saveData();
+              updateView();
+              renderThemeList();
+              syncActiveThemeToFirestore(this.dataset.id);
+              showToast(`已設定「${theme.title}」為目前使用中主題`);
+            });
+          }
+
+          // 綁定「刪除」按鈕
+          card.querySelector('.btn-delete-theme').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const targetId = this.dataset.id;
+            if (state.themes.length <= 1) {
+              showToast("至少需保留一個測驗主題，無法全部刪除", false);
+              return;
+            }
+            state.themes = state.themes.filter(t => t.id !== targetId);
+            if (state.activeThemeId === targetId) {
+              state.activeThemeId = state.themes[0].id;
+            }
+            if (state.viewingStatsThemeId === targetId) {
+              state.viewingStatsThemeId = null;
+            }
+            delete state.themeRecords[targetId];
+            delete state.themeLockedClasses[targetId];
+            saveData();
+            updateView();
+            deleteThemeFromFirestore(targetId);
+            if (state.activeThemeId) {
+              syncActiveThemeToFirestore(state.activeThemeId);
+            }
+            showToast("主題已成功刪除");
+          });
+
+          container.appendChild(card);
+
+          // 若當前展開的是這個主題的統計，將統計面板安全掛載至該主題下方
+          if (isViewingStats) {
+            const slot = card.querySelector(`#statsSlot_${theme.id}`);
+            if (slot && statsPanel) {
+              slot.appendChild(statsPanel);
+              statsPanel.classList.remove('hidden');
+              renderTargetThemeStats(theme);
+            }
+          }
+        });
+      }
+
+      // 渲染指定主題之「全校時段可施測統計表」與「各班填報進度清單 (36班)」
+      function renderTargetThemeStats(theme) {
+        const records = getThemeRecords(theme.id);
+        const lockedClasses = getThemeLockedClasses(theme.id);
+        const labelText = theme.availableLabel || "可施測";
+        const filterGrade = state.statsFilterGrade || 'all';
+
+        // 1. 更新統計表頭與標籤
+        document.getElementById('heatmapHeaderTitle').textContent = `「${theme.title}」全校時段${labelText}班級統計表`;
+        document.getElementById('heatmapHeaderDesc').textContent = `數字代表該時段勾選「${labelText}」之班級數量，綠色愈深代表可配合的班級愈多。`;
+        document.getElementById('heatmapLegendLabel').textContent = `${labelText}班級數：`;
+        document.getElementById('selectHeatmapGrade').value = filterGrade;
+
+        const weekDays = getWeekDays(state.currentDate);
+        for (let i = 0; i < 5; i++) {
+          const d = weekDays[i];
+          const span = document.getElementById(`hmDate${i + 1}`);
+          if (span) span.textContent = formatShortDate(d);
+        }
+
+        // 2. 渲染統計表格列
+        const tbody = document.getElementById('heatmapTableBody');
+        tbody.innerHTML = '';
+
+        PERIODS.forEach(period => {
+          const tr = document.createElement('tr');
+          tr.className = period.type === 'lunch' ? 'bg-slate-50' : 'hover:bg-slate-50/50';
+
+          const tdLabel = document.createElement('td');
+          tdLabel.className = 'py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 bg-slate-50 text-left';
+          tdLabel.innerHTML = `<div>${period.name}</div><div class="text-[10px] text-slate-400 font-normal mt-0.5">${period.time}</div>`;
+          tr.appendChild(tdLabel);
+
+          weekDays.forEach((day, dayIndex) => {
+            const dateStr = formatDate(day);
+            const slotKey = `${dateStr}_${period.id}`;
+            const td = document.createElement('td');
+            td.className = 'py-2 px-1.5 border-r border-slate-200 cursor-pointer select-none transition ' + (dayIndex === 4 ? 'border-r-0' : '');
+
+            const availableClasses = [];
+            ALL_CLASSES.forEach(c => {
+              if (filterGrade !== 'all' && String(c.grade) !== filterGrade) return;
+              const rec = records[c.code];
+              if (rec && rec.availableSlots && rec.availableSlots[slotKey]) {
+                availableClasses.push(c);
+              }
+            });
+
+            const count = availableClasses.length;
+            let bgClass = "bg-slate-50 text-slate-500 border border-slate-200";
+            if (count >= 1 && count <= 5) {
+              bgClass = "bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium";
+            } else if (count >= 6 && count <= 15) {
+              bgClass = "bg-emerald-100 text-emerald-900 border border-emerald-300 font-semibold";
+            } else if (count >= 16) {
+              bgClass = "bg-emerald-500 text-white font-bold shadow-2xs";
+            }
+
+            td.innerHTML = `
+              <div class="py-1 px-2 rounded-lg ${bgClass} flex flex-col items-center justify-center">
+                <span class="text-xs font-mono font-bold">${count} 班</span>
+                <span class="text-[10px] opacity-80">${count === 0 ? '空白' : labelText}</span>
+              </div>
+            `;
+
+            td.addEventListener('click', () => {
+              openAdminDetailModal(dateStr, period, day, availableClasses, labelText);
+            });
+
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        // 3. 渲染各班填報進度清單 (36班)
+        const container = document.getElementById('classListContainer');
+        container.innerHTML = '';
+
+        let submittedCount = 0;
+        let lockedCount = 0;
+
+        GRADES.forEach(grade => {
+          const gradeClasses = ALL_CLASSES.filter(c => c.grade === grade);
+          const gradeCard = document.createElement('div');
+          gradeCard.className = 'border border-slate-200 rounded-xl p-3.5 bg-slate-50/60';
+
+          const gradeTitle = ['一', '二', '三', '四', '五', '六'][grade - 1] + '年級 (共 6 班)';
+          
+          let gridHtml = `
+          <div class="flex items-center justify-between mb-2.5">
+            <h5 class="font-bold text-xs text-slate-800 flex items-center">
+              <span class="w-1.5 h-3 bg-indigo-600 rounded mr-1.5"></span>
+              ${gradeTitle}
+            </h5>
+            <button class="btn-batch-lock-grade text-[11px] font-semibold text-slate-600 hover:text-amber-800 bg-white hover:bg-amber-50 px-2 py-0.5 rounded border border-slate-200 transition" data-grade="${grade}">
+              🔒 全學年免填切換
+            </button>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">`;
+
+          gradeClasses.forEach(c => {
+            const isLocked = Boolean(lockedClasses[c.code]);
+            const rec = records[c.code];
+            const hasData = rec && (rec.submitted || (rec.availableSlots && Object.keys(rec.availableSlots).length > 0));
+            const slotCount = (rec && rec.availableSlots) ? Object.keys(rec.availableSlots).length : 0;
+
+            if (isLocked) {
+              lockedCount++;
+            } else if (hasData) {
+              submittedCount++;
+            }
+
+            let cardBg = 'bg-slate-100/70 border-slate-200';
+            let cardStyle = '';
+            let titleColor = 'text-slate-800';
+            let statusText = '<span class="text-slate-400">尚未填寫</span>';
+            let statusBadge = '';
+            let btnLockClass = 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200';
+            let btnLockIconColor = 'text-slate-400';
+            let dividerColor = 'border-slate-200/60';
+
+            if (isLocked) {
+              cardBg = 'bg-amber-50/90 border-amber-300 shadow-2xs';
+              titleColor = 'text-slate-800';
+              statusText = '<span class="text-amber-700 font-bold">免填報 (已鎖定)</span>';
+              statusBadge = '<span class="text-[10px] bg-amber-100 text-amber-800 px-1 rounded font-bold ml-1">🔒免填</span>';
+              btnLockClass = 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300';
+              btnLockIconColor = 'text-amber-700';
+              dividerColor = 'border-amber-200/80';
+            } else if (hasData) {
+              // 依需求：滿版色彩填滿為 #95CACA，外框加深強化立體感，字體維持黑色
+              cardBg = 'shadow-xs text-slate-900';
+              cardStyle = 'style="background-color: #95CACA; border-color: #6ea9a9;"';
+              titleColor = 'text-slate-900 font-bold';
+              statusText = `<span class="text-slate-900 font-medium">已選 ${slotCount} 節${labelText}</span>`;
+              btnLockClass = 'bg-white/40 hover:bg-white/60 text-slate-800 border border-slate-600/30';
+              btnLockIconColor = 'text-slate-700';
+              dividerColor = 'border-slate-800/20';
+            }
+
+            gridHtml += `
+              <div class="p-2 rounded-lg border text-center transition flex flex-col justify-between ${cardBg}" ${cardStyle}>
+                <div>
+                  <div class="font-bold text-xs ${titleColor} flex items-center justify-center">
+                    <span>${c.number}班 (${c.code})</span>
+                    ${statusBadge}
+                  </div>
+                  <div class="mt-0.5 text-[10px]">
+                    ${statusText}
+                  </div>
+                  ${(rec && rec.note && rec.note.trim()) ? `<div class="mt-1 text-[10px] px-1.5 py-0.5 rounded truncate ${hasData ? 'bg-white/70 text-slate-900 font-semibold border border-slate-700/20' : 'bg-amber-100/70 text-amber-900 border border-amber-200'}" title="${rec.note.trim()}">📝 ${rec.note.trim()}</div>` : ''}
+                </div>
+                <div class="mt-1.5 pt-1 border-t ${dividerColor}">
+                  <button class="btn-toggle-class-lock w-full py-0.5 text-[10px] font-semibold rounded transition flex items-center justify-center space-x-1 ${btnLockClass}" data-code="${c.code}">
+                    <svg class="w-3 h-3 ${btnLockIconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      ${isLocked 
+                        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>' 
+                        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>'}
+                    </svg>
+                    <span>${isLocked ? '解除鎖定' : '鎖定免填'}</span>
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          gridHtml += `</div>`;
+          gradeCard.innerHTML = gridHtml;
+          container.appendChild(gradeCard);
+        });
+
+        // 綁定各班鎖定切換
+        container.querySelectorAll('.btn-toggle-class-lock').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const code = this.dataset.code;
+            if (lockedClasses[code]) {
+              delete lockedClasses[code];
+              showToast(`已解除 ${code} 班鎖定，恢復可填報狀態`);
+            } else {
+              lockedClasses[code] = true;
+              showToast(`已鎖定 ${code} 班為免填報班級`);
+            }
+            saveData();
+            syncLockedClassesToFirestore(theme.id, lockedClasses);
+            renderTargetThemeStats(theme);
+          });
+        });
+
+        // 綁定全學年鎖定切換
+        container.querySelectorAll('.btn-batch-lock-grade').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const grade = parseInt(this.dataset.grade, 10);
+            const gradeClasses = ALL_CLASSES.filter(c => c.grade === grade);
+            const allLocked = gradeClasses.every(c => Boolean(lockedClasses[c.code]));
+
+            gradeClasses.forEach(c => {
+              if (allLocked) {
+                delete lockedClasses[c.code];
+              } else {
+                lockedClasses[c.code] = true;
+              }
+            });
+
+            saveData();
+            syncLockedClassesToFirestore(theme.id, lockedClasses);
+            renderTargetThemeStats(theme);
+            showToast(allLocked ? `已解除 ${grade} 年級全學年鎖定` : `已將 ${grade} 年級全學年設為免填報`);
+          });
+        });
+
+        const activeTotal = ALL_CLASSES.length - lockedCount;
+        const percent = activeTotal > 0 ? Math.round((submittedCount / activeTotal) * 100) : 100;
+        document.getElementById('completionRateText').innerHTML = `
+          應填班級：${activeTotal} 班 ｜ 已填報：${submittedCount} 班 (${percent}%) ｜ 🔒 免填報：${lockedCount} 班
+        `;
+        document.getElementById('progressBar').style.width = `${percent}%`;
+
+        // 4. 統計彙整：各班導師補充備註彙整列表
+        const notesContainer = document.getElementById('classNotesTableArea');
+        const notesBadge = document.getElementById('notesCountBadge');
+        const noteItems = [];
+
+        ALL_CLASSES.forEach(c => {
+          const rec = records[c.code];
+          if (rec && rec.note && rec.note.trim() !== '') {
+            noteItems.push({
+              code: c.code,
+              name: c.name,
+              note: rec.note.trim(),
+              updateTime: rec.updateTime || '無填報時間'
+            });
+          }
+        });
+
+        notesBadge.textContent = `共 ${noteItems.length} 則備註`;
+
+        if (noteItems.length === 0) {
+          notesContainer.innerHTML = `
+            <div class="py-6 text-center text-slate-400">
+              <svg class="w-6 h-6 mx-auto mb-1 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              目前尚無班級填寫補充備註。
+            </div>
+          `;
+        } else {
+          notesContainer.innerHTML = noteItems.map(item => `
+            <div class="py-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2 hover:bg-slate-50/80 px-2 rounded-lg transition">
+              <div class="flex items-center space-x-2 flex-shrink-0">
+                <span class="px-2 py-0.5 rounded font-bold bg-sky-100 text-sky-800 text-xs">${item.name} (${item.code})</span>
+                <span class="text-[11px] text-slate-400">${item.updateTime}</span>
+              </div>
+              <div class="flex-1 text-slate-700 font-medium pl-1 sm:pl-3 break-words bg-amber-50/40 p-2 rounded-lg border border-amber-100">
+                ${item.note}
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      function openAdminDetailModal(dateStr, period, dayDate, availableClasses, labelText) {
+        const modal = document.getElementById('modalAdminDetail');
+        const title = document.getElementById('adminModalTitle');
+        const listContainer = document.getElementById('availableClassList');
+
+        const dayName = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'][dayDate.getDay()];
+        title.textContent = `${dateStr} (${dayName}) ${period.name} ${labelText}班級 (${availableClasses.length} 班)`;
+
+        if (availableClasses.length === 0) {
+          listContainer.innerHTML = `
+            <div class="py-6 text-center text-slate-400">
+              目前尚無班級在此時段勾選「${labelText}」。
+            </div>
+          `;
+        } else {
+          listContainer.innerHTML = availableClasses.map(c => `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+              <div class="font-bold text-slate-800">${c.name} (${c.code})</div>
+              <div class="text-emerald-700 text-xs font-semibold">${labelText}</div>
+            </div>
+          `).join('');
+        }
+
+        modal.classList.remove('hidden');
+      }
+
+      function openEditThemeModal(themeId) {
+        const theme = state.themes.find(t => t.id === themeId);
+        if (!theme) return;
+        state.editingThemeId = themeId;
+
+        document.getElementById('inputEditThemeTitle').value = theme.title || '';
+        document.getElementById('inputEditThemeSubtitle').value = theme.subtitle || '';
+        document.getElementById('textareaEditThemeNotice').value = theme.notice || '';
+        document.getElementById('inputEditThemeLabel').value = theme.availableLabel || '可施測';
+        document.getElementById('inputEditThemeStartDate').value = theme.startDate || '';
+        document.getElementById('inputEditThemeEndDate').value = theme.endDate || '';
+
+        document.getElementById('modalEditTheme').classList.remove('hidden');
+      }
+
+      function exportThemeCSV(theme) {
+        const records = getThemeRecords(theme.id);
+        const lockedClasses = getThemeLockedClasses(theme.id);
+        const currentLabel = theme.availableLabel || "可施測";
+        let csvContent = "\uFEFF";
+        csvContent += `測驗主題：${theme.title}\n`;
+        csvContent += `班級代號,班級名稱,填報狀態,是否免填報,${currentLabel}節數,${currentLabel}時段清單,導師補充備註,最後更新時間\n`;
+
+        ALL_CLASSES.forEach(c => {
+          const isLocked = Boolean(lockedClasses[c.code]);
+          const rec = records[c.code] || { submitted: false, updateTime: '', note: '', availableSlots: {} };
+          let status = isLocked ? "免填報 (已鎖定)" : (rec.submitted ? "已完成填報" : "未填報");
+          const slotDetails = [];
+          if (rec.availableSlots && !isLocked) {
+            for (const key of Object.keys(rec.availableSlots)) {
+              slotDetails.push(key);
+            }
+          }
+          const slotStr = `"${slotDetails.join('; ')}"`;
+          const noteStr = `"${(rec.note || '').replace(/"/g, '""')}"`;
+          csvContent += `${c.code},${c.name},${status},${isLocked ? '是' : '否'},${slotDetails.length},${slotStr},${noteStr},${rec.updateTime || '無'}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${theme.title}_填報彙整表_${formatDate(new Date())}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("CSV 報表匯出成功");
+      }
+
+      // ----------------------------------------------------
+      // 事件監聽與互動邏輯
+      // ----------------------------------------------------
+      function bindEvents() {
+        document.getElementById('formTeacherLoginQuick').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const code = document.getElementById('inputClassCodeQuick').value;
+          const parsed = parseClassCode(code);
+          if (!parsed) {
+            showToast("請輸入有效班級代號（如 101、203）", false);
+            return;
+          }
+          state.currentUser = {
+            role: 'teacher',
+            classCode: parsed.code,
+            className: parsed.name
+          };
+          state.isModifiedSinceSave = false;
+          const activeTheme = getActiveTheme();
+          if (activeTheme && activeTheme.startDate) {
+            const todayStr = formatDate(new Date());
+            if (!isDateInRange(todayStr, activeTheme)) {
+              const parts = activeTheme.startDate.split('-');
+              if (parts.length === 3) {
+                state.currentDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+              }
+            }
+          }
+          saveData();
+          updateView();
+          showToast(`歡迎 ${parsed.name} 導師登入`);
+        });
+
+        document.getElementById('btnOpenTeacherLogin').addEventListener('click', function() {
+          document.getElementById('inputClassCodeModal').value = '';
+          document.getElementById('errorTeacherLogin').classList.add('hidden');
+          document.getElementById('modalTeacherLogin').classList.remove('hidden');
+        });
+
+        document.getElementById('btnCloseTeacherModal').addEventListener('click', function() {
+          document.getElementById('modalTeacherLogin').classList.add('hidden');
+        });
+
+        document.getElementById('formTeacherLoginModal').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const code = document.getElementById('inputClassCodeModal').value;
+          const parsed = parseClassCode(code);
+          const errBox = document.getElementById('errorTeacherLogin');
+          if (!parsed) {
+            errBox.textContent = "班級代號不存在，請重新輸入";
+            errBox.classList.remove('hidden');
+            return;
+          }
+          state.currentUser = {
+            role: 'teacher',
+            classCode: parsed.code,
+            className: parsed.name
+          };
+          state.isModifiedSinceSave = false;
+          const activeTheme = getActiveTheme();
+          if (activeTheme && activeTheme.startDate) {
+            const todayStr = formatDate(new Date());
+            if (!isDateInRange(todayStr, activeTheme)) {
+              const parts = activeTheme.startDate.split('-');
+              if (parts.length === 3) {
+                state.currentDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+              }
+            }
+          }
+          saveData();
+          document.getElementById('modalTeacherLogin').classList.add('hidden');
+          updateView();
+          showToast(`歡迎 ${parsed.name} 導師登入`);
+        });
+
+        document.getElementById('btnAdminIcon').addEventListener('click', function() {
+          document.getElementById('inputAdminPassword').value = '';
+          document.getElementById('errorAdminAuth').classList.add('hidden');
+          document.getElementById('modalAdminAuth').classList.remove('hidden');
+          setTimeout(() => {
+            document.getElementById('inputAdminPassword').focus();
+          }, 100);
+        });
+
+        document.getElementById('btnCloseAdminModal').addEventListener('click', function() {
+          document.getElementById('modalAdminAuth').classList.add('hidden');
+        });
+
+        document.getElementById('btnCancelAdminAuth').addEventListener('click', function() {
+          document.getElementById('modalAdminAuth').classList.add('hidden');
+        });
+
+        document.getElementById('formAdminAuth').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const pwd = document.getElementById('inputAdminPassword').value;
+          const errBox = document.getElementById('errorAdminAuth');
+          if (pwd === ADMIN_PASSWORD) {
+            state.currentUser = { role: 'admin' };
+            saveData();
+            document.getElementById('modalAdminAuth').classList.add('hidden');
+            updateView();
+            showToast("管理者身分驗證成功");
+          } else {
+            errBox.classList.remove('hidden');
+            document.getElementById('inputAdminPassword').value = '';
+          }
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', function() {
+          state.currentUser = null;
+          state.isModifiedSinceSave = false;
+          saveData();
+          updateView();
+          showToast("已成功登出");
+        });
+
+        document.getElementById('btnAdminExit').addEventListener('click', function() {
+          state.currentUser = null;
+          saveData();
+          updateView();
+        });
+
+        document.getElementById('btnPrevWeek').addEventListener('click', function() {
+          const d = new Date(state.currentDate);
+          d.setDate(d.getDate() - 7);
+          state.currentDate = d;
+          renderTeacherSchedule();
+        });
+
+        document.getElementById('btnNextWeek').addEventListener('click', function() {
+          const d = new Date(state.currentDate);
+          d.setDate(d.getDate() + 7);
+          state.currentDate = d;
+          renderTeacherSchedule();
+        });
+
+        document.getElementById('btnCurrentWeek').addEventListener('click', function() {
+          state.currentDate = new Date();
+          renderTeacherSchedule();
+        });
+
+        document.getElementById('btnSaveSchedule').addEventListener('click', function() {
+          if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+          const code = state.currentUser.classCode;
+          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          if (lockedClasses[code]) {
+            showToast("本班已設定為免填報，無需儲存", false);
+            return;
+          }
+          const records = getThemeRecords(state.activeThemeId);
+          if (!records[code]) {
+            records[code] = { availableSlots: {} };
+          }
+          records[code].submitted = true;
+          records[code].updateTime = new Date().toLocaleString();
+          records[code].note = document.getElementById('textareaClassNote').value.trim();
+
+          state.isModifiedSinceSave = false;
+          saveData();
+          updateSaveButtonStatus();
+          if (db) {
+            syncSubmissionToFirestore(state.activeThemeId, code, records[code]);
+          } else {
+            showToast("已成功送出儲存！");
+          }
+        });
+
+        document.getElementById('btnSetMorningAvailable').addEventListener('click', function() {
+          if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+          const code = state.currentUser.classCode;
+          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          if (lockedClasses[code]) {
+            showToast("本班已設定為免填報，無需勾選", false);
+            return;
+          }
+          const activeTheme = getActiveTheme();
+          const records = getThemeRecords(state.activeThemeId);
+          if (!records[code]) records[code] = { availableSlots: {} };
+          if (!records[code].availableSlots) records[code].availableSlots = {};
+          const weekDays = getWeekDays(state.currentDate);
+
+          // 僅針對在開放選填範圍內的日期進行批次勾選
+          const selectableDays = weekDays.filter(day => isDateInRange(formatDate(day), activeTheme));
+          if (selectableDays.length === 0) {
+            showToast("本週無在開放選填範圍內的日期", false);
+            return;
+          }
+
+          const allSelected = selectableDays.every(day => {
+            const dateStr = formatDate(day);
+            return Boolean(records[code].availableSlots[`${dateStr}_p0`]);
+          });
+
+          if (allSelected) {
+            selectableDays.forEach(day => {
+              const dateStr = formatDate(day);
+              delete records[code].availableSlots[`${dateStr}_p0`];
+            });
+            showToast("已取消全選早休（恢復空白）");
+          } else {
+            selectableDays.forEach(day => {
+              const dateStr = formatDate(day);
+              records[code].availableSlots[`${dateStr}_p0`] = true;
+            });
+            showToast("已全選開放日期的早休");
+          }
+
+          markDataModified();
+          saveData();
+          renderTeacherSchedule();
+        });
+
+        document.getElementById('btnSetLunchAvailable').addEventListener('click', function() {
+          if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+          const code = state.currentUser.classCode;
+          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          if (lockedClasses[code]) {
+            showToast("本班已設定為免填報，無需勾選", false);
+            return;
+          }
+          const activeTheme = getActiveTheme();
+          const records = getThemeRecords(state.activeThemeId);
+          if (!records[code]) records[code] = { availableSlots: {} };
+          if (!records[code].availableSlots) records[code].availableSlots = {};
+          const weekDays = getWeekDays(state.currentDate);
+
+          // 僅針對在開放選填範圍內的日期進行批次勾選
+          const selectableDays = weekDays.filter(day => isDateInRange(formatDate(day), activeTheme));
+          if (selectableDays.length === 0) {
+            showToast("本週無在開放選填範圍內的日期", false);
+            return;
+          }
+
+          const allSelected = selectableDays.every(day => {
+            const dateStr = formatDate(day);
+            return Boolean(records[code].availableSlots[`${dateStr}_p_lunch`]);
+          });
+
+          if (allSelected) {
+            selectableDays.forEach(day => {
+              const dateStr = formatDate(day);
+              delete records[code].availableSlots[`${dateStr}_p_lunch`];
+            });
+            showToast("已取消全選午休（恢復空白）");
+          } else {
+            selectableDays.forEach(day => {
+              const dateStr = formatDate(day);
+              records[code].availableSlots[`${dateStr}_p_lunch`] = true;
+            });
+            showToast("已全選開放日期的午休");
+          }
+
+          markDataModified();
+          saveData();
+          renderTeacherSchedule();
+        });
+
+        document.getElementById('btnClearAllOptions').addEventListener('click', function() {
+          if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+          const code = state.currentUser.classCode;
+          const records = getThemeRecords(state.activeThemeId);
+          if (records[code] && records[code].availableSlots) {
+            const weekDays = getWeekDays(state.currentDate);
+            weekDays.forEach(day => {
+              const dateStr = formatDate(day);
+              PERIODS.forEach(p => {
+                delete records[code].availableSlots[`${dateStr}_${p.id}`];
+              });
+            });
+            document.getElementById('textareaClassNote').value = '';
+            records[code].note = '';
+          }
+          markDataModified();
+          saveData();
+          renderTeacherSchedule();
+          showToast("已清除所有選項，恢復全空白狀態");
+        });
+
+        document.getElementById('textareaClassNote').addEventListener('input', function() {
+          markDataModified();
+        });
+
+        document.getElementById('btnCloseAdminDetail').addEventListener('click', function() {
+          document.getElementById('modalAdminDetail').classList.add('hidden');
+        });
+        document.getElementById('btnCloseAdminDetailBtn').addEventListener('click', function() {
+          document.getElementById('modalAdminDetail').classList.add('hidden');
+        });
+
+        // 雲端資料庫手動同步按鈕
+        const btnManualSync = document.getElementById('btnManualCloudSync');
+        if (btnManualSync) {
+          btnManualSync.addEventListener('click', function() {
+            if (!db) {
+              initFirebase();
+            } else {
+              setupFirestoreRealtimeListeners();
+            }
+            showToast("正在重新同步 Firebase 雲端資料庫...");
+          });
+        }
+
+        // 打開新增主題彈窗
+        document.getElementById('btnOpenAddThemeModal').addEventListener('click', function() {
+          document.getElementById('inputNewThemeTitle').value = '';
+          document.getElementById('inputNewThemeSubtitle').value = '';
+          document.getElementById('textareaNewThemeNotice').value = '';
+          document.getElementById('inputNewThemeLabel').value = '';
+          document.getElementById('inputNewThemeStartDate').value = '';
+          document.getElementById('inputNewThemeEndDate').value = '';
+          document.getElementById('modalAddNewTheme').classList.remove('hidden');
+        });
+
+        document.getElementById('btnCloseAddThemeModal').addEventListener('click', function() {
+          document.getElementById('modalAddNewTheme').classList.add('hidden');
+        });
+        document.getElementById('btnCancelAddThemeModal').addEventListener('click', function() {
+          document.getElementById('modalAddNewTheme').classList.add('hidden');
+        });
+
+        // 提交新增主題
+        document.getElementById('formAddNewTheme').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const title = document.getElementById('inputNewThemeTitle').value.trim();
+          const subtitle = document.getElementById('inputNewThemeSubtitle').value.trim();
+          const notice = document.getElementById('textareaNewThemeNotice').value.trim();
+          const availableLabel = document.getElementById('inputNewThemeLabel').value.trim() || '可施測';
+          const startDate = document.getElementById('inputNewThemeStartDate').value;
+          const endDate = document.getElementById('inputNewThemeEndDate').value;
+
+          if (!title) {
+            showToast("請輸入主題名稱", false);
+            return;
+          }
+
+          if (startDate && endDate && startDate > endDate) {
+            showToast("開放起始日期不可晚於截止日期", false);
+            return;
+          }
+
+          const newId = "theme_" + Date.now();
+          const newTheme = { id: newId, title, subtitle, notice, availableLabel, startDate, endDate };
+          state.themes.push(newTheme);
+          state.activeThemeId = newId;
+
+          document.getElementById('modalAddNewTheme').classList.add('hidden');
+          saveData();
+          updateView();
+          renderThemeList();
+          syncThemeToFirestore(newTheme);
+          syncActiveThemeToFirestore(newId);
+          showToast(`已新增並啟用主題：「${title}」`);
+        });
+
+        // 關閉編輯主題彈窗
+        document.getElementById('btnCloseEditThemeModal').addEventListener('click', function() {
+          document.getElementById('modalEditTheme').classList.add('hidden');
+        });
+        document.getElementById('btnCancelEditThemeModal').addEventListener('click', function() {
+          document.getElementById('modalEditTheme').classList.add('hidden');
+        });
+
+        // 提交編輯主題
+        document.getElementById('formEditCurrentTheme').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const targetId = state.editingThemeId || state.activeThemeId;
+          const theme = state.themes.find(t => t.id === targetId);
+          if (!theme) return;
+
+          const title = document.getElementById('inputEditThemeTitle').value.trim();
+          const subtitle = document.getElementById('inputEditThemeSubtitle').value.trim();
+          const notice = document.getElementById('textareaEditThemeNotice').value.trim();
+          const availableLabel = document.getElementById('inputEditThemeLabel').value.trim() || '可施測';
+          const startDate = document.getElementById('inputEditThemeStartDate').value;
+          const endDate = document.getElementById('inputEditThemeEndDate').value;
+
+          if (!title) {
+            showToast("主題名稱不可為空白", false);
+            return;
+          }
+
+          if (startDate && endDate && startDate > endDate) {
+            showToast("開放起始日期不可晚於截止日期", false);
+            return;
+          }
+
+          theme.title = title;
+          theme.subtitle = subtitle;
+          theme.notice = notice;
+          theme.availableLabel = availableLabel;
+          theme.startDate = startDate;
+          theme.endDate = endDate;
+
+          document.getElementById('modalEditTheme').classList.add('hidden');
+          saveData();
+          updateView();
+          renderThemeList();
+          syncThemeToFirestore(theme);
+          showToast("主題內容已成功儲存修改！");
+        });
+
+        // 統計面板內部子切換按鈕事件
+        const tabBtnHeatmap = document.getElementById('tabBtnHeatmap');
+        const tabBtnClasses = document.getElementById('tabBtnClasses');
+        const contentHeatmap = document.getElementById('tabContentHeatmap');
+        const contentClasses = document.getElementById('tabContentClasses');
+
+        tabBtnHeatmap.addEventListener('click', function(e) {
+          e.stopPropagation();
+          tabBtnHeatmap.className = "text-indigo-600 border-b-2 border-indigo-600 pb-1.5 transition flex items-center space-x-1.5";
+          tabBtnClasses.className = "text-slate-500 hover:text-indigo-600 pb-1.5 transition flex items-center space-x-1.5 border-b-2 border-transparent";
+          contentHeatmap.classList.remove('hidden');
+          contentClasses.classList.remove('hidden');
+        });
+
+        tabBtnClasses.addEventListener('click', function(e) {
+          e.stopPropagation();
+          tabBtnClasses.className = "text-indigo-600 border-b-2 border-indigo-600 pb-1.5 transition flex items-center space-x-1.5";
+          tabBtnHeatmap.className = "text-slate-500 hover:text-indigo-600 pb-1.5 transition flex items-center space-x-1.5 border-b-2 border-transparent";
+          contentClasses.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        document.getElementById('tabBtnTheme').addEventListener('click', function(e) {
+          e.stopPropagation();
+          renderThemeList();
+        });
+
+        // 統計面板年級篩選事件
+        document.getElementById('selectHeatmapGrade').addEventListener('change', function() {
+          state.statsFilterGrade = this.value;
+          if (state.viewingStatsThemeId) {
+            const theme = state.themes.find(t => t.id === state.viewingStatsThemeId);
+            if (theme) renderTargetThemeStats(theme);
+          }
+        });
+
+        // 全域 CSV 匯出（匯出當前使用中主題）
+        document.getElementById('btnAdminExportCSV').addEventListener('click', function() {
+          const activeTheme = getActiveTheme();
+          exportThemeCSV(activeTheme);
+        });
+
+        // 清空當前使用主題填報紀錄
+        document.getElementById('btnClearCurrentThemeData').addEventListener('click', function() {
+          state.themeRecords[state.activeThemeId] = {};
+          saveData();
+          renderThemeList();
+          showToast("已清空目前使用中主題之所有班級填報紀錄");
+        });
+      }
+
+      function init() {
+        loadData();
+        bindEvents();
+        updateView();
+        initFirebase();
+      }
+
+      window.addEventListener('DOMContentLoaded', init);
+    })();
+  </script>
+</body>
+</html>
