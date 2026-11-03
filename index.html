@@ -60,6 +60,15 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
+    .cursor-grab {
+      cursor: grab;
+      cursor: -webkit-grab;
+    }
+    .cursor-grabbing {
+      cursor: grabbing !important;
+      cursor: -webkit-grabbing !important;
+      user-select: none !important;
+    }
     @media print {
       .no-print {
         display: none !important;
@@ -493,32 +502,60 @@
                     <span class="w-2 h-2 rounded-full bg-emerald-600 mr-2"></span>
                     <span id="heatmapHeaderTitle">全校時段可施測班級統計表</span>
                   </h4>
-                  <p class="text-xs text-slate-500 mt-0.5" id="heatmapHeaderDesc">
-                    數字代表該時段勾選之班級數量，綠色愈深代表可施測的班級愈多。
-                  </p>
+                  <div class="flex flex-wrap items-center gap-2 mt-0.5">
+                    <p class="text-xs text-slate-500" id="heatmapHeaderDesc">
+                      數字代表該時段勾選之班級數量，綠色愈深代表可配合的班級愈多。點選任一儲存格可查看班級名單。
+                    </p>
+                    <span class="hidden sm:inline-flex items-center text-[10px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200 font-medium">
+                      <svg class="w-3.5 h-3.5 mr-1 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                      </svg>
+                      可按住滑鼠左鍵左右拖曳滑動
+                    </span>
+                  </div>
                 </div>
 
-                <!-- 年級篩選器 -->
-                <div class="flex items-center space-x-2">
-                  <label for="selectHeatmapGrade" class="text-xs font-semibold text-slate-600">年級篩選：</label>
-                  <select id="selectHeatmapGrade" class="px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white outline-none">
-                    <option value="all">全校 (1~6年級 共36班)</option>
-                    <option value="1">一年級 (101~106)</option>
-                    <option value="2">二年級 (201~206)</option>
-                    <option value="3">三年級 (301~306)</option>
-                    <option value="4">四年級 (401~406)</option>
-                    <option value="5">五年級 (501~506)</option>
-                    <option value="6">六年級 (601~606)</option>
-                  </select>
+                <!-- 統計瀏覽控制群：週次/區間選擇器與年級篩選 -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <!-- 檢視範圍 / 週次選擇器（支援超過一週與全區間完整瀏覽） -->
+                  <div class="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button type="button" id="btnStatsPrevWeek" class="p-1 text-slate-500 hover:text-slate-800 hover:bg-white rounded-lg transition" title="上一週">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                      </svg>
+                    </button>
+                    <select id="selectStatsDateRange" class="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500">
+                      <!-- 動態生成：全區間所有日期、各週選項 -->
+                    </select>
+                    <button type="button" id="btnStatsNextWeek" class="p-1 text-slate-500 hover:text-slate-800 hover:bg-white rounded-lg transition" title="下一週">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- 年級篩選器 -->
+                  <div class="flex items-center space-x-1.5">
+                    <label for="selectHeatmapGrade" class="text-xs font-semibold text-slate-600">年級篩選：</label>
+                    <select id="selectHeatmapGrade" class="px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                      <option value="all">全校 (1~6年級 共36班)</option>
+                      <option value="1">一年級 (101~106)</option>
+                      <option value="2">二年級 (201~206)</option>
+                      <option value="3">三年級 (301~306)</option>
+                      <option value="4">四年級 (401~406)</option>
+                      <option value="5">五年級 (501~506)</option>
+                      <option value="6">六年級 (601~606)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <!-- 熱力圖表格 -->
-              <div class="overflow-x-auto">
+              <!-- 熱力圖表格（支援滑鼠按住左鍵拖曳滑動檢視） -->
+              <div id="heatmapScrollContainer" class="overflow-x-auto cursor-grab select-none rounded-xl border border-slate-200">
                 <table class="w-full border-collapse text-center">
-                  <thead>
+                  <thead id="heatmapTableHead">
                     <tr class="bg-slate-100 text-slate-700 text-xs">
-                      <th class="py-2.5 px-3 w-32 border-r border-slate-200 text-left">節次 / 時間</th>
+                      <th class="py-2.5 px-3 w-32 border-r border-slate-200 text-left sticky left-0 z-20 bg-slate-100 shadow-xs">節次 / 時間</th>
                       <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay1">週一 (<span id="hmDate1">11/02</span>)</th>
                       <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay2">週二 (<span id="hmDate2">11/03</span>)</th>
                       <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay3">週三 (<span id="hmDate3">11/04</span>)</th>
@@ -795,7 +832,7 @@
             </label>
             <input type="text" id="inputNewThemeTitle" required
                    class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                   placeholder="例如：115學年度 上學期成長測驗" />
+                   placeholder="例如：113學年度 第一學期 第二次定期評量" />
           </div>
 
           <div>
@@ -1031,6 +1068,8 @@
 
         // 統計篩選年級狀態
         statsFilterGrade: 'all',
+        statsCurrentDate: new Date(),
+        statsDateRangeMode: 'all', // 'all' (全區間所有日期) 或 'week_X'
 
         // 追蹤導師端自上次儲存後是否有修改
         isModifiedSinceSave: false
@@ -1336,6 +1375,107 @@
       // ----------------------------------------------------
       // 計算主題開放選填日期狀態
       // ----------------------------------------------------
+      
+      // 解析 YYYY-MM-DD 為當地時間 Date 物件
+      function parseLocalDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return null;
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      }
+
+      // 取得主題開放區間內的所有上課日 (週一至週五)
+      function getThemeOpenWeekdays(theme) {
+        if (!theme || !theme.startDate || !theme.endDate) {
+          return getWeekDays(state.statsCurrentDate || new Date());
+        }
+        const start = parseLocalDate(theme.startDate);
+        const end = parseLocalDate(theme.endDate);
+        if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+          return getWeekDays(state.statsCurrentDate || new Date());
+        }
+        const days = [];
+        const curr = new Date(start);
+        while (curr <= end) {
+          const dayOfWeek = curr.getDay();
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            days.push(new Date(curr));
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+        return days.length > 0 ? days : getWeekDays(state.statsCurrentDate || new Date());
+      }
+
+      // 將主題開放區間內的所有上課日依週次分組
+      function getThemeWeeks(theme) {
+        const allDays = getThemeOpenWeekdays(theme);
+        const weekMap = new Map();
+        allDays.forEach(d => {
+          const monday = getWeekDays(d)[0];
+          const key = formatDate(monday);
+          if (!weekMap.has(key)) {
+            weekMap.set(key, {
+              monday: monday,
+              friday: getWeekDays(d)[4],
+              days: []
+            });
+          }
+          weekMap.get(key).days.push(d);
+        });
+        return Array.from(weekMap.values());
+      }
+
+      
+      // 滑鼠按住左鍵拖曳滑動統計課表功能變數
+      let isDragScrolling = false;
+      let dragStartX = 0;
+      let dragScrollLeft = 0;
+      let hasDraggedDistance = false;
+
+      function setupDragToScroll(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.addEventListener('mousedown', function(e) {
+          if (e.button !== 0) return; // 僅響應滑鼠左鍵
+          isDragScrolling = true;
+          hasDraggedDistance = false;
+          dragStartX = e.pageX - container.offsetLeft;
+          dragScrollLeft = container.scrollLeft;
+          container.classList.add('cursor-grabbing');
+          container.classList.remove('cursor-grab');
+        });
+
+        window.addEventListener('mouseup', function(e) {
+          if (isDragScrolling) {
+            isDragScrolling = false;
+            container.classList.remove('cursor-grabbing');
+            container.classList.add('cursor-grab');
+            setTimeout(() => {
+              hasDraggedDistance = false;
+            }, 60);
+          }
+        });
+
+        container.addEventListener('mouseleave', function() {
+          if (isDragScrolling) {
+            isDragScrolling = false;
+            container.classList.remove('cursor-grabbing');
+            container.classList.add('cursor-grab');
+          }
+        });
+
+        container.addEventListener('mousemove', function(e) {
+          if (!isDragScrolling) return;
+          const x = e.pageX - container.offsetLeft;
+          const walk = (x - dragStartX) * 1.5; // 滑動加速度
+          if (Math.abs(walk) > 4) {
+            hasDraggedDistance = true;
+          }
+          container.scrollLeft = dragScrollLeft - walk;
+        });
+      }
+
       function isDateInRange(dateStr, theme) {
         if (!theme) return true;
         if (theme.startDate && dateStr < theme.startDate) return false;
@@ -1871,6 +2011,12 @@
               state.viewingStatsThemeId = null; // 收合
             } else {
               state.viewingStatsThemeId = targetId; // 展開
+              state.statsDateRangeMode = 'all'; // 預設完整展開全區間
+              if (theme.startDate) {
+                state.statsCurrentDate = parseLocalDate(theme.startDate) || new Date();
+              } else {
+                state.statsCurrentDate = new Date();
+              }
             }
             renderThemeList();
           });
@@ -1938,37 +2084,117 @@
         const labelText = theme.availableLabel || "可施測";
         const filterGrade = state.statsFilterGrade || 'all';
 
-        // 1. 更新統計表頭與標籤
+        // 1. 更新統計表頭標題與說明
         document.getElementById('heatmapHeaderTitle').textContent = `「${theme.title}」全校時段${labelText}班級統計表`;
-        document.getElementById('heatmapHeaderDesc').textContent = `數字代表該時段勾選「${labelText}」之班級數量，綠色愈深代表可配合的班級愈多。`;
+        document.getElementById('heatmapHeaderDesc').textContent = `數字代表該時段勾選「${labelText}」之班級數量，綠色愈深代表可配合的班級愈多。點選任一儲存格可查看班級名單。`;
         document.getElementById('heatmapLegendLabel').textContent = `${labelText}班級數：`;
         document.getElementById('selectHeatmapGrade').value = filterGrade;
 
-        const weekDays = getWeekDays(state.currentDate);
-        for (let i = 0; i < 5; i++) {
-          const d = weekDays[i];
-          const span = document.getElementById(`hmDate${i + 1}`);
-          if (span) span.textContent = formatShortDate(d);
+        // 計算開放區間與週次結構
+        const allOpenDays = getThemeOpenWeekdays(theme);
+        const themeWeeks = getThemeWeeks(theme);
+
+        // 填充檢視範圍/週次下拉選單
+        const selectDateRange = document.getElementById('selectStatsDateRange');
+        if (selectDateRange) {
+          const currentMode = state.statsDateRangeMode || 'all';
+          selectDateRange.innerHTML = '';
+
+          if (theme.startDate && theme.endDate) {
+            // 提供「全區間完整瀏覽」選項
+            const optAll = document.createElement('option');
+            optAll.value = 'all';
+            optAll.textContent = `🌟 完整顯示全區間所有日期 (${allOpenDays.length} 天)`;
+            selectDateRange.appendChild(optAll);
+
+            // 提供各單週選項
+            themeWeeks.forEach((w, idx) => {
+              const optWeek = document.createElement('option');
+              optWeek.value = `week_${idx}`;
+              optWeek.textContent = `📅 第 ${idx + 1} 週 (${formatShortDate(w.monday)} ～ ${formatShortDate(w.friday)})`;
+              selectDateRange.appendChild(optWeek);
+            });
+          } else {
+            // 無設定起訖日期時，依目前檢視週次
+            const currentWeekDays = getWeekDays(state.statsCurrentDate || new Date());
+            const optCurr = document.createElement('option');
+            optCurr.value = 'week_0';
+            optCurr.textContent = `📅 檢視週次 (${formatShortDate(currentWeekDays[0])} ～ ${formatShortDate(currentWeekDays[4])})`;
+            selectDateRange.appendChild(optCurr);
+          }
+
+          // 保持選取項目
+          if (Array.from(selectDateRange.options).some(o => o.value === currentMode)) {
+            selectDateRange.value = currentMode;
+          } else {
+            selectDateRange.value = selectDateRange.options[0].value;
+            state.statsDateRangeMode = selectDateRange.value;
+          }
         }
 
-        // 2. 渲染統計表格列
+        // 決定要渲染於統計表格的日期欄位
+        let displayDays = [];
+        if (state.statsDateRangeMode === 'all') {
+          displayDays = allOpenDays;
+        } else if (state.statsDateRangeMode.startsWith('week_')) {
+          const weekIdx = parseInt(state.statsDateRangeMode.replace('week_', ''), 10);
+          if (themeWeeks[weekIdx]) {
+            displayDays = themeWeeks[weekIdx].days;
+          } else {
+            displayDays = getWeekDays(state.statsCurrentDate || new Date());
+          }
+        } else {
+          displayDays = getWeekDays(state.statsCurrentDate || new Date());
+        }
+
+        // 2. 動態渲染統計表格表頭 (Thead)
+        const thead = document.getElementById('heatmapTableHead');
+        thead.innerHTML = '';
+        const trHead = document.createElement('tr');
+        trHead.className = "bg-slate-100 text-slate-700 text-xs";
+
+        const thCorner = document.createElement('th');
+        thCorner.className = "py-2.5 px-3 w-32 border-r border-slate-200 text-left sticky left-0 z-20 bg-slate-100 shadow-xs";
+        thCorner.textContent = "節次 / 時間";
+        trHead.appendChild(thCorner);
+
+        const dayNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+        const todayStr = formatDate(new Date());
+
+        displayDays.forEach((d, idx) => {
+          const th = document.createElement('th');
+          if (idx < 5) th.id = `hmThDay${idx + 1}`;
+          const dStr = formatDate(d);
+          const isToday = dStr === todayStr;
+          const isLast = idx === displayDays.length - 1;
+          th.className = `py-2.5 px-2 border-r border-slate-200 min-w-[75px] sm:min-w-[90px] ${isToday ? 'bg-sky-50 text-sky-800' : ''} ${isLast ? 'border-r-0' : ''}`;
+          th.innerHTML = `
+            <div class="font-bold text-xs sm:text-sm text-slate-800"><span ${idx < 5 ? `id="hmDate${idx + 1}"` : ''}>${formatShortDate(d)}</span></div>
+            <div class="text-[10px] text-slate-500 font-normal mt-0.5">${dayNames[d.getDay()]}</div>
+          `;
+          trHead.appendChild(th);
+        });
+        thead.appendChild(trHead);
+
+        // 3. 渲染統計表格列 (Tbody)
         const tbody = document.getElementById('heatmapTableBody');
         tbody.innerHTML = '';
 
         PERIODS.forEach(period => {
           const tr = document.createElement('tr');
-          tr.className = period.type === 'lunch' ? 'bg-slate-50' : 'hover:bg-slate-50/50';
+          tr.className = period.type === 'lunch' ? 'bg-slate-50/70' : 'hover:bg-slate-50/50';
 
           const tdLabel = document.createElement('td');
-          tdLabel.className = 'py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 bg-slate-50 text-left';
+          tdLabel.className = 'py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 bg-slate-50 text-left sticky left-0 z-10 shadow-xs';
           tdLabel.innerHTML = `<div>${period.name}</div><div class="text-[10px] text-slate-400 font-normal mt-0.5">${period.time}</div>`;
           tr.appendChild(tdLabel);
 
-          weekDays.forEach((day, dayIndex) => {
+          displayDays.forEach((day, dayIndex) => {
             const dateStr = formatDate(day);
             const slotKey = `${dateStr}_${period.id}`;
+            const isLast = dayIndex === displayDays.length - 1;
             const td = document.createElement('td');
-            td.className = 'py-2 px-1.5 border-r border-slate-200 cursor-pointer select-none transition ' + (dayIndex === 4 ? 'border-r-0' : '');
+            td.className = 'py-2 px-1.5 border-r border-slate-200 cursor-pointer select-none transition ' + (isLast ? 'border-r-0' : '');
 
             const availableClasses = [];
             ALL_CLASSES.forEach(c => {
@@ -1990,13 +2216,14 @@
             }
 
             td.innerHTML = `
-              <div class="py-1 px-2 rounded-lg ${bgClass} flex flex-col items-center justify-center">
+              <div class="py-1 px-1.5 rounded-lg ${bgClass} flex flex-col items-center justify-center">
                 <span class="text-xs font-mono font-bold">${count} 班</span>
                 <span class="text-[10px] opacity-80">${count === 0 ? '空白' : labelText}</span>
               </div>
             `;
 
             td.addEventListener('click', () => {
+              if (hasDraggedDistance) return; // 剛剛是在拖曳滑動，不彈出班級詳細名單
               openAdminDetailModal(dateStr, period, day, availableClasses, labelText);
             });
 
@@ -2273,6 +2500,7 @@
       // 事件監聽與互動邏輯
       // ----------------------------------------------------
       function bindEvents() {
+        setupDragToScroll('heatmapScrollContainer');
         document.getElementById('formTeacherLoginQuick').addEventListener('submit', function(e) {
           e.preventDefault();
           const code = document.getElementById('inputClassCodeQuick').value;
@@ -2695,6 +2923,68 @@
           e.stopPropagation();
           renderThemeList();
         });
+
+        // 統計面板檢視範圍/週次篩選事件
+        const selectDateRange = document.getElementById('selectStatsDateRange');
+        if (selectDateRange) {
+          selectDateRange.addEventListener('change', function() {
+            state.statsDateRangeMode = this.value;
+            if (state.viewingStatsThemeId) {
+              const theme = state.themes.find(t => t.id === state.viewingStatsThemeId);
+              if (theme) renderTargetThemeStats(theme);
+            }
+          });
+        }
+
+        // 統計面板上一週按鈕
+        const btnStatsPrev = document.getElementById('btnStatsPrevWeek');
+        if (btnStatsPrev) {
+          btnStatsPrev.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!state.viewingStatsThemeId) return;
+            const theme = state.themes.find(t => t.id === state.viewingStatsThemeId);
+            if (!theme) return;
+
+            const themeWeeks = getThemeWeeks(theme);
+            if (themeWeeks.length > 0 && state.statsDateRangeMode.startsWith('week_')) {
+              let idx = parseInt(state.statsDateRangeMode.replace('week_', ''), 10);
+              idx = Math.max(0, idx - 1);
+              state.statsDateRangeMode = `week_${idx}`;
+            } else if (themeWeeks.length > 0) {
+              state.statsDateRangeMode = `week_0`;
+            } else {
+              const d = new Date(state.statsCurrentDate || new Date());
+              d.setDate(d.getDate() - 7);
+              state.statsCurrentDate = d;
+            }
+            renderTargetThemeStats(theme);
+          });
+        }
+
+        // 統計面板下一週按鈕
+        const btnStatsNext = document.getElementById('btnStatsNextWeek');
+        if (btnStatsNext) {
+          btnStatsNext.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!state.viewingStatsThemeId) return;
+            const theme = state.themes.find(t => t.id === state.viewingStatsThemeId);
+            if (!theme) return;
+
+            const themeWeeks = getThemeWeeks(theme);
+            if (themeWeeks.length > 0 && state.statsDateRangeMode.startsWith('week_')) {
+              let idx = parseInt(state.statsDateRangeMode.replace('week_', ''), 10);
+              idx = Math.min(themeWeeks.length - 1, idx + 1);
+              state.statsDateRangeMode = `week_${idx}`;
+            } else if (themeWeeks.length > 0) {
+              state.statsDateRangeMode = `week_${Math.min(1, themeWeeks.length - 1)}`;
+            } else {
+              const d = new Date(state.statsCurrentDate || new Date());
+              d.setDate(d.getDate() + 7);
+              state.statsCurrentDate = d;
+            }
+            renderTargetThemeStats(theme);
+          });
+        }
 
         // 統計面板年級篩選事件
         document.getElementById('selectHeatmapGrade').addEventListener('change', function() {
