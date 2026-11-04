@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>測驗時段登記系統</title>
+  <title>時段登記系統</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
@@ -103,7 +103,7 @@
         </div>
         <div class="truncate">
           <div class="flex items-center space-x-2">
-            <h1 id="headerThemeTitle" class="text-base sm:text-lg font-bold text-slate-900 truncate">測驗時段填報系統</h1>
+            <h1 id="headerThemeTitle" class="text-base sm:text-lg font-bold text-slate-900 truncate">時段登記系統</h1>
             <span id="roleBadge" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800">
               未登入
             </span>
@@ -114,7 +114,6 @@
 
       <!-- 右側功能區塊 -->
       <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-        <!-- 登入資訊（當有登入身分時顯示） -->
         <!-- 雲端資料庫連線狀態指示燈號（僅顯示燈號） -->
         <div id="cloudSyncBadge" class="hidden sm:inline-flex items-center justify-center p-2 rounded-full bg-emerald-50 border border-emerald-200 shadow-2xs transition" title="雲端已同步 (Firebase Firestore: timeslot-b0553)">
           <span id="cloudSyncDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -124,6 +123,9 @@
         <div id="userInfoArea" class="hidden items-center space-x-2 bg-slate-100 py-1 px-3 rounded-lg text-sm">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span id="userDisplayName" class="font-medium text-slate-700"></span>
+          <button id="btnNavThemeList" class="hidden text-xs text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded border border-sky-200 ml-1 font-semibold transition" title="返回測驗主題列表">
+            📋 主題列表
+          </button>
           <button id="btnLogout" class="text-xs text-rose-600 hover:text-rose-800 ml-1 font-semibold underline">
             登出
           </button>
@@ -137,7 +139,7 @@
           <span>導師登入</span>
         </button>
 
-        <!-- 管理者圖示入口（完全無多餘文字提示） -->
+        <!-- 管理者圖示入口 -->
         <button id="btnAdminIcon" class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="系統管理" aria-label="系統管理">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -160,7 +162,7 @@
         </svg>
       </div>
       <h2 id="guestThemeTitle" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
-        測驗時段填報系統
+        時段登記系統
       </h2>
       <p id="guestThemeDesc" class="text-slate-600 max-w-xl mx-auto mb-8 text-sm sm:text-base leading-relaxed">
         歡迎各位班級導師。請輸入您的班級代號登入，登記貴班節次時段，以便教務處與輔導室順利安排施測。
@@ -192,7 +194,6 @@
               </button>
             </form>
           </div>
-
         </div>
 
         <!-- 右側：手機掃描填報 QR Code 卡片 (5 欄) -->
@@ -208,9 +209,7 @@
 
             <!-- QR Code 容器 -->
             <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl shadow-2xs inline-flex items-center justify-center mx-auto mb-2">
-              <div id="qrcodeContainer" class="w-[125px] h-[125px] flex items-center justify-center overflow-hidden">
-                <!-- 動態注入 QRCode -->
-              </div>
+              <div id="qrcodeContainer" class="w-[125px] h-[125px] flex items-center justify-center overflow-hidden"></div>
             </div>
           </div>
 
@@ -231,191 +230,226 @@
 
     <!-- 視圖 2：導師填報介面 -->
     <div id="viewTeacher" class="hidden space-y-6">
-      
-      <!-- 鎖定免填報警示橫幅 -->
-      <div id="bannerClassLocked" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center space-x-3 text-amber-900 shadow-2xs">
-        <div class="p-2 bg-amber-100 rounded-xl text-amber-700 flex-shrink-0">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-          </svg>
-        </div>
-        <div>
-          <div class="font-bold text-sm">本班經管理者設定為「免填報班級」</div>
-          <div class="text-xs text-amber-700 mt-0.5">貴班無須參加或登記本次測驗之實施時段，課表目前為鎖定唯讀狀態。如需變更請聯繫管理員。</div>
-        </div>
-      </div>
 
-      <!-- 開放日期區間狀態提醒橫幅 -->
-      <div id="bannerDateRangeNotice" class="hidden rounded-2xl p-4 flex items-center space-x-3 shadow-2xs">
-        <div id="bannerDateRangeIcon" class="p-2 rounded-xl flex-shrink-0">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <div>
-          <div id="bannerDateRangeTitle" class="font-bold text-sm"></div>
-          <div id="bannerDateRangeDesc" class="text-xs mt-0.5"></div>
-        </div>
-      </div>
-
-      <!-- 頂部資訊與控制列 -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div class="flex items-center space-x-2 mb-1">
-            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-sky-100 text-sky-800" id="currentClassTag">三年二班 (302)</span>
-            <span id="tagClassLocked" class="hidden px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">🔒 免填報 (已鎖定)</span>
-            <span class="text-xs text-slate-400">|</span>
-            <span class="text-xs text-slate-500" id="teacherCurrentTheme">主題載入中</span>
-            <span id="teacherDateRangeBadge" class="hidden px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200"></span>
+      <!-- ==================== 2-A. 導師端：測驗主題列表視圖 ==================== -->
+      <div id="teacherThemesView" class="space-y-6">
+        <!-- 頂部資訊看板 -->
+        <div class="bg-gradient-to-r from-sky-600 to-indigo-700 text-white rounded-2xl p-6 shadow-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2 mb-1.5">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30" id="teacherThemeListClassTag">三年二班 (302)</span>
+              <span class="text-xs text-sky-200 font-medium">班級時段登記專區</span>
+            </div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">主題列表</h2>
+            <p class="text-xs sm:text-sm text-sky-100 mt-1">
+              請點選下方欲登記的主題
+            </p>
           </div>
-          <h2 class="text-xl font-bold text-slate-900 flex items-center">
-            登記時段
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-500 mt-0.5" id="teacherGuideSubtitle">
-            點選單元格即可標記，再次點選或清除即可恢復空白。
-          </p>
-          <!-- 施測注意事項公告區（解決注意事項未顯示問題） -->
-          <div id="teacherThemeNoticeBox" class="hidden mt-3 p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-start space-x-2 shadow-2xs">
-            <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <div>
-              <span class="font-bold text-amber-950">注意事項：</span>
-              <span id="teacherThemeNoticeText" class="text-amber-800 leading-relaxed"></span>
+          <div class="flex items-center space-x-2 flex-shrink-0">
+            <span class="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs font-semibold text-white shadow-2xs" id="teacherThemeCountBadge">
+              共 1 個主題
+            </span>
+          </div>
+        </div>
+
+        <!-- 主題卡片清單容器（各主題呈現標題、開放區間與貴班填報進度，點選即進入填報） -->
+        <div id="teacherThemesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- ==================== 2-B. 導師端：選定主題課表登記填報視圖 ==================== -->
+      <div id="teacherScheduleView" class="hidden space-y-6">
+        <!-- 返回主題列表頂部導航列 -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <div class="flex items-center space-x-2.5">
+            <button type="button" id="btnBackToThemeList" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center space-x-1.5 border border-slate-300 shadow-2xs">
+              <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              <span>‹ 返回主題列表</span>
+            </button>
+            <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
+            <div class="text-xs font-semibold text-slate-500">
+              當前登記主題：<span class="text-xs font-bold text-sky-800" id="teacherCurrentThemeTop">主題載入中</span>
             </div>
           </div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-100 text-sky-800" id="currentClassTagTop">一年一班 (101)</span>
+          </div>
         </div>
 
-        <!-- 週次切換控制器（真實日期） -->
-        <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto">
-          <button id="btnPrevWeek" class="p-2 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition" title="上一週">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        <!-- 鎖定免填報警示橫幅 -->
+        <div id="bannerClassLocked" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center space-x-3 text-amber-900 shadow-2xs">
+          <div class="p-2 bg-amber-100 rounded-xl text-amber-700 flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
             </svg>
-          </button>
-          
-          <div class="text-center px-3 min-w-[200px]">
-            <div id="weekRangeLabel" class="text-sm font-bold text-slate-800">2026/11/02 ~ 2026/11/06</div>
-            <div id="weekRelativeLabel" class="text-xs text-sky-600 font-medium">第 10 週 (本週)</div>
+          </div>
+          <div>
+            <div class="font-bold text-sm">本班經管理者設定為「免填報班級」</div>
+            <div class="text-xs text-amber-700 mt-0.5">貴班無須參加或登記本次測驗之實施時段，課表目前為鎖定唯讀狀態。如需變更請聯繫管理員。</div>
+          </div>
+        </div>
+
+        <!-- 開放日期區間狀態提醒橫幅 -->
+        <div id="bannerDateRangeNotice" class="hidden rounded-2xl p-4 flex items-center space-x-3 shadow-2xs">
+          <div id="bannerDateRangeIcon" class="p-2 rounded-xl flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          <div>
+            <div id="bannerDateRangeTitle" class="font-bold text-sm"></div>
+            <div id="bannerDateRangeDesc" class="text-xs mt-0.5"></div>
+          </div>
+        </div>
+
+        <!-- 頂部資訊與控制列 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-sky-100 text-sky-800" id="currentClassTag">三年二班 (302)</span>
+              <span id="tagClassLocked" class="hidden px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">🔒 免填報 (已鎖定)</span>
+              <span class="text-xs text-slate-400">|</span>
+              <span class="text-xs text-slate-500" id="teacherCurrentTheme">主題載入中</span>
+              <span id="teacherDateRangeBadge" class="hidden px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200"></span>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900 flex items-center">
+              登記時段
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5" id="teacherGuideSubtitle">
+              點選單元格即可標記，再次點選或清除即可恢復空白。
+            </p>
+            <!-- 施測注意事項公告區 -->
+            <div id="teacherThemeNoticeBox" class="hidden mt-3 p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-start space-x-2 shadow-2xs">
+              <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div>
+                <span class="font-bold text-amber-950">注意事項：</span>
+                <span id="teacherThemeNoticeText" class="text-amber-800 leading-relaxed"></span>
+              </div>
+            </div>
           </div>
 
-          <button id="btnNextWeek" class="p-2 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition" title="下一週">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
+          <!-- 週次切換控制器 -->
+          <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto">
+            <button id="btnPrevWeek" class="p-2 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition" title="上一週">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+            
+            <div class="text-center px-3 min-w-[200px]">
+              <div id="weekRangeLabel" class="text-sm font-bold text-slate-800">2026/11/02 ~ 2026/11/06</div>
+              <div id="weekRelativeLabel" class="text-xs text-sky-600 font-medium">第 10 週 (本週)</div>
+            </div>
 
-          <button id="btnCurrentWeek" class="ml-1 px-2.5 py-1 text-xs font-semibold bg-white text-slate-700 hover:text-sky-600 border border-slate-200 rounded-lg shadow-2xs transition">
-            本週
-          </button>
+            <button id="btnNextWeek" class="p-2 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition" title="下一週">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+
+            <button id="btnCurrentWeek" class="ml-1 px-2.5 py-1 text-xs font-semibold bg-white text-slate-700 hover:text-sky-600 border border-slate-200 rounded-lg shadow-2xs transition">
+              本週
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- 快速操作輔助列：依需求將全選早休、全選午休、清除所有選項按鈕往左移動至圖例右邊 -->
-      <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <!-- 左側區域：可施測（點選標記）圖例 + 往左移動至其右側之操作按鈕群 -->
-        <div class="flex flex-wrap items-center gap-2">
-          <!-- 狀態圖例（自訂標記圖例） -->
-          <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
-            <span class="w-3.5 h-3.5 rounded border border-emerald-400 bg-emerald-100"></span>
-            <span id="legendAvailableText" class="text-xs font-bold text-emerald-800">可施測（點選標記）</span>
+        <!-- 快速操作輔助列 -->
+        <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- 狀態圖例 -->
+            <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+              <span class="w-3.5 h-3.5 rounded border border-emerald-400 bg-emerald-100"></span>
+              <span id="legendAvailableText" class="text-xs font-bold text-emerald-800">可施測（點選標記）</span>
+            </div>
+
+            <button id="btnSetMorningAvailable" class="px-3 py-1.5 text-xs text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition font-semibold flex items-center space-x-1">
+              <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+              <span>全選早休</span>
+            </button>
+            
+            <button id="btnSetLunchAvailable" class="px-3 py-1.5 text-xs text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg transition font-semibold flex items-center space-x-1">
+              <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+              </svg>
+              <span>全選午休</span>
+            </button>
+
+            <button id="btnClearAllOptions" class="px-3 py-1.5 text-xs text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition font-medium">
+              清除所有選項
+            </button>
           </div>
 
-          <!-- 非開放日圖例 -->
-          <div class="hidden sm:flex items-center space-x-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-500 text-xs">
-            <span class="w-3.5 h-3.5 rounded border border-slate-300 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">－</span>
-            <span>非開放日 (不可標記)</span>
+          <!-- 右側區域：儲存按鈕與修改提醒 -->
+          <div class="flex flex-wrap items-center gap-2" id="teacherActionButtonsArea">
+            <span id="saveStatusNotice" class="hidden text-xs font-bold text-amber-700 bg-amber-50 border border-amber-300 px-2.5 py-1.5 rounded-lg flex items-center space-x-1 shadow-2xs animate-pulse">
+              <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+              <span>有修改需再點選一次確認送出儲存</span>
+            </span>
+
+            <button id="btnSaveSchedule" class="px-4 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+              <svg id="saveBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span id="saveBtnText">確認送出儲存</span>
+            </button>
           </div>
-
-          <button id="btnSetMorningAvailable" class="px-3 py-1.5 text-xs text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition font-semibold flex items-center space-x-1">
-            <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-            <span>全選早休</span>
-          </button>
-          
-          <button id="btnSetLunchAvailable" class="px-3 py-1.5 text-xs text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg transition font-semibold flex items-center space-x-1">
-            <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-            </svg>
-            <span>全選午休</span>
-          </button>
-
-          <button id="btnClearAllOptions" class="px-3 py-1.5 text-xs text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition font-medium">
-            清除所有選項
-          </button>
         </div>
 
-        <!-- 右側區域：儲存按鈕與修改提醒 -->
-        <div class="flex flex-wrap items-center gap-2" id="teacherActionButtonsArea">
-          <!-- 修改提醒標籤 -->
-          <span id="saveStatusNotice" class="hidden text-xs font-bold text-amber-700 bg-amber-50 border border-amber-300 px-2.5 py-1.5 rounded-lg flex items-center space-x-1 shadow-2xs animate-pulse">
-            <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-            <span>有修改需再點選一次確認送出儲存</span>
-          </span>
-
-          <!-- 儲存按鈕 -->
-          <button id="btnSaveSchedule" class="px-4 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-            <svg id="saveBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span id="saveBtnText">確認送出儲存</span>
-          </button>
+        <!-- 週時段課表網格 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-center">
+              <thead>
+                <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700">
+                  <th class="py-3.5 px-3 font-semibold text-xs text-slate-500 w-32 uppercase tracking-wider border-r border-slate-200">
+                    節次 / 時間
+                  </th>
+                  <th id="thDay1" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                    <div class="text-slate-800">週一</div>
+                    <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay1">11/02</div>
+                  </th>
+                  <th id="thDay2" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                    <div class="text-slate-800">週二</div>
+                    <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay2">11/03</div>
+                  </th>
+                  <th id="thDay3" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                    <div class="text-slate-800">週三</div>
+                    <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay3">11/04</div>
+                  </th>
+                  <th id="thDay4" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
+                    <div class="text-slate-800">週四</div>
+                    <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay4">11/05</div>
+                  </th>
+                  <th id="thDay5" class="py-3.5 px-2 font-bold text-sm min-w-[130px]">
+                    <div class="text-slate-800">週五</div>
+                    <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay5">11/06</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="scheduleTableBody" class="divide-y divide-slate-200"></tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <!-- 週時段課表網格 -->
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse text-center">
-            <thead>
-              <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700">
-                <th class="py-3.5 px-3 font-semibold text-xs text-slate-500 w-32 uppercase tracking-wider border-r border-slate-200">
-                  節次 / 時間
-                </th>
-                <!-- 週一至週五表頭（動態填入真實日期） -->
-                <th id="thDay1" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
-                  <div class="text-slate-800">週一</div>
-                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay1">11/02</div>
-                </th>
-                <th id="thDay2" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
-                  <div class="text-slate-800">週二</div>
-                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay2">11/03</div>
-                </th>
-                <th id="thDay3" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
-                  <div class="text-slate-800">週三</div>
-                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay3">11/04</div>
-                </th>
-                <th id="thDay4" class="py-3.5 px-2 font-bold text-sm min-w-[130px] border-r border-slate-200">
-                  <div class="text-slate-800">週四</div>
-                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay4">11/05</div>
-                </th>
-                <th id="thDay5" class="py-3.5 px-2 font-bold text-sm min-w-[130px]">
-                  <div class="text-slate-800">週五</div>
-                  <div class="text-xs text-slate-500 font-normal mt-0.5" id="dateDay5">11/06</div>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="scheduleTableBody" class="divide-y divide-slate-200">
-              <!-- 動態生成課表節次 -->
-            </tbody>
-          </table>
+        <!-- 導師填寫備註卡片 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+          <label for="textareaClassNote" class="block text-sm font-bold text-slate-800 mb-1">
+            導師補充備註（選填）
+          </label>
+          <p class="text-xs text-slate-500 mb-2">
+            若有其他排程考量（例如：某日校外教學全日無法測驗、大型比賽等），可於此補充說明。
+          </p>
+          <textarea id="textareaClassNote" rows="2"
+                    class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
+                    placeholder="請在此輸入備註說明..."></textarea>
         </div>
-      </div>
-
-      <!-- 導師填寫備註卡片 -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
-        <label for="textareaClassNote" class="block text-sm font-bold text-slate-800 mb-1">
-          導師補充備註（選填）
-        </label>
-        <p class="text-xs text-slate-500 mb-2">
-          若有其他排程考量（例如：某日校外教學全日無法測驗、大型比賽等），可於此補充說明。
-        </p>
-        <textarea id="textareaClassNote" rows="2"
-                  class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
-                  placeholder="請在此輸入備註說明..."></textarea>
       </div>
 
     </div>
@@ -439,12 +473,6 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <button id="btnAdminExportCSV" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center space-x-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-            </svg>
-            <span>匯出填報總表 (CSV)</span>
-          </button>
           <button id="btnAdminExit" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold transition">
             返回使用者畫面
           </button>
@@ -482,10 +510,8 @@
         </div>
       </div>
 
-      <!-- 管理者主區塊：預先只顯示「現有主題列表」與「新增主題」按鈕 -->
+      <!-- 管理者主區塊：主題列表與統計 -->
       <div id="tabContentTheme" class="space-y-6">
-        
-        <!-- 主要卡片：現有主題列表（含新增主題按鈕） -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
             <div>
@@ -499,7 +525,6 @@
               </p>
             </div>
             
-            <!-- 預先顯示新增主題按鈕 -->
             <button id="btnOpenAddThemeModal" type="button" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center space-x-1.5 flex-shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -508,17 +533,12 @@
             </button>
           </div>
 
-          <!-- 主題清單容器（動態渲染主題項目，包含編輯按鈕、統計按鈕） -->
-          <div id="themeListTableContainer" class="space-y-4">
-            <!-- 各主題卡片 -->
-          </div>
+          <div id="themeListTableContainer" class="space-y-4"></div>
         </div>
 
-        <!-- 統計面板安全駐留容器（確保 statsPanel 在清空主題列表時永遠安全存在，不會被摧毀！） -->
+        <!-- 統計面板安全駐留容器 -->
         <div id="statsPanelSafeHolder" class="hidden">
           <div id="themeInlineStatsPanel" class="mt-4 p-5 rounded-2xl bg-gradient-to-b from-slate-50 to-white border border-indigo-200 shadow-sm space-y-5">
-            
-            <!-- 面板內部切換導航按鈕（保持結構完整性，並讓管理員可於面板內快速切換檢視） -->
             <div class="border-b border-slate-200 flex space-x-4 text-xs font-bold text-slate-600 pb-2">
               <button id="tabBtnHeatmap" class="text-indigo-600 border-b-2 border-indigo-600 pb-1.5 transition flex items-center space-x-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -556,18 +576,14 @@
                   </div>
                 </div>
 
-                <!-- 統計瀏覽控制群：週次/區間選擇器與年級篩選 -->
                 <div class="flex flex-wrap items-center gap-2.5">
-                  <!-- 檢視範圍 / 週次選擇器（支援超過一週與全區間完整瀏覽） -->
                   <div class="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
                     <button type="button" id="btnStatsPrevWeek" class="p-1 text-slate-500 hover:text-slate-800 hover:bg-white rounded-lg transition" title="上一週">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                       </svg>
                     </button>
-                    <select id="selectStatsDateRange" class="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500">
-                      <!-- 動態生成：全區間所有日期、各週選項 -->
-                    </select>
+                    <select id="selectStatsDateRange" class="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500"></select>
                     <button type="button" id="btnStatsNextWeek" class="p-1 text-slate-500 hover:text-slate-800 hover:bg-white rounded-lg transition" title="下一週">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -575,7 +591,6 @@
                     </button>
                   </div>
 
-                  <!-- 年級篩選器 -->
                   <div class="flex items-center space-x-1.5">
                     <label for="selectHeatmapGrade" class="text-xs font-semibold text-slate-600">年級篩選：</label>
                     <select id="selectHeatmapGrade" class="px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500">
@@ -591,22 +606,11 @@
                 </div>
               </div>
 
-              <!-- 熱力圖表格（支援滑鼠按住左鍵拖曳滑動檢視） -->
+              <!-- 熱力圖表格 -->
               <div id="heatmapScrollContainer" class="overflow-x-auto cursor-grab select-none rounded-xl border border-slate-200">
                 <table class="w-full border-collapse text-center">
-                  <thead id="heatmapTableHead">
-                    <tr class="bg-slate-100 text-slate-700 text-xs">
-                      <th class="py-2.5 px-3 w-32 border-r border-slate-200 text-left sticky left-0 z-20 bg-slate-100 shadow-xs">節次 / 時間</th>
-                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay1">週一 (<span id="hmDate1">11/02</span>)</th>
-                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay2">週二 (<span id="hmDate2">11/03</span>)</th>
-                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay3">週三 (<span id="hmDate3">11/04</span>)</th>
-                      <th class="py-2.5 px-2 border-r border-slate-200" id="hmThDay4">週四 (<span id="hmDate4">11/05</span>)</th>
-                      <th class="py-2.5 px-2" id="hmThDay5">週五 (<span id="hmDate5">11/06</span>)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="heatmapTableBody" class="divide-y divide-slate-200 text-xs">
-                    <!-- 動態填入統計圖 -->
-                  </tbody>
+                  <thead id="heatmapTableHead"></thead>
+                  <tbody id="heatmapTableBody" class="divide-y divide-slate-200 text-xs"></tbody>
                 </table>
               </div>
 
@@ -632,13 +636,11 @@
                     已完成填報：0 / 36 班 (0%)
                   </p>
                 </div>
-                <!-- 進度條 -->
                 <div class="w-full sm:w-56 bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
                   <div id="progressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
                 </div>
               </div>
 
-              <!-- 說明提示 -->
               <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-600 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                   <span class="w-2 h-2 rounded-full bg-amber-500"></span>
@@ -651,13 +653,10 @@
                 </div>
               </div>
 
-              <!-- 年級卡片清單網格 -->
-              <div id="classListContainer" class="space-y-3">
-                <!-- 動態渲染 1~6 年級卡片 -->
-              </div>
+              <div id="classListContainer" class="space-y-3"></div>
             </div>
 
-            <!-- 子區塊 3：導師補充備註統計彙整（解決導師補充備註未列入統計問題） -->
+            <!-- 子區塊 3：導師補充備註統計彙整 -->
             <div id="statsNotesContainer" class="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-3">
               <div class="flex items-center justify-between">
                 <div>
@@ -679,17 +678,6 @@
           </div>
         </div>
 
-        <!-- 資料維護功能 -->
-        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
-          <div>
-            <span>如需清空當前使用中主題之所有班級填報資料，可點選右方按鈕。</span>
-          </div>
-          <div>
-            <button id="btnClearCurrentThemeData" class="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold transition">
-              清空當前主題之填報紀錄
-            </button>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -726,7 +714,7 @@
     </div>
   </div>
 
-  <!-- ==================== 彈出視窗 2：管理者登入密碼驗證（完全無任何提示） ==================== -->
+  <!-- ==================== 彈出視窗 2：管理者登入密碼驗證 ==================== -->
   <div id="modalAdminAuth" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
       <div class="flex items-center justify-between mb-4">
@@ -836,9 +824,7 @@
 
       <div class="space-y-3">
         <p class="text-xs text-slate-500">以下為在該時段點選標記之班級：</p>
-        <div id="availableClassList" class="max-h-60 overflow-y-auto space-y-1.5 text-xs">
-          <!-- 動態插入班級名單 -->
-        </div>
+        <div id="availableClassList" class="max-h-60 overflow-y-auto space-y-1.5 text-xs"></div>
         <div class="text-right pt-2">
           <button type="button" id="btnCloseAdminDetailBtn" class="px-4 py-1.5 text-xs bg-slate-800 text-white rounded-lg font-semibold">關閉</button>
         </div>
@@ -895,7 +881,6 @@
                  placeholder="例如：請勾選各班可施測時段，點選即為標記" />
         </div>
 
-        <!-- 指定開放選填日期區間 -->
         <div class="space-y-1.5">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -987,7 +972,6 @@
                  class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
         </div>
 
-        <!-- 指定開放選填日期區間 -->
         <div class="space-y-1.5">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -1050,7 +1034,7 @@
       const CLASSES_PER_GRADE = 6;
       const ADMIN_PASSWORD = "0000";
 
-      // 節次定義：依據校長課表作息時間調整
+      // 節次定義
       const PERIODS = [
         { id: "p0", name: "早自修", time: "7:50 ~ 8:30", type: "morning" },
         { id: "p1", name: "第一節", time: "8:40 ~ 9:20", type: "class" },
@@ -1086,19 +1070,14 @@
           notice: "敬請各位導師點選貴班可施測之時段，未點選時段預設保持空白。",
           availableLabel: "可施測",
           startDate: "2026-11-02",
-          endDate: "2026-11-06"
+          endDate: "2026-11-06",
+          isOpen: true
         }
       ];
 
-      // 狀態管理物件
-      
-      // ====================================================
-      // 首頁 QR Code 動態生成與網址複製功能
-      // ====================================================
       function getAppShareUrl() {
         let url = window.location.href;
         if (!url || url.startsWith('file:') || url.startsWith('about:') || url.startsWith('data:') || url.startsWith('blob:')) {
-          // 當地端檔案或預覽環境開啟時，預設連結至 Firebase 專案網址
           return "https://timeslot-b0553.web.app";
         }
         return url;
@@ -1138,7 +1117,6 @@
           }
         }
 
-        // 離線/無庫時使用 QR 圖片標籤降級呈現
         const img = document.createElement('img');
         img.src = `https://api.qrserver.com/v1/create-qr-code/?size=125x125&margin=2&data=${encodeURIComponent(shareUrl)}`;
         img.alt = "系統登記 QR Code";
@@ -1152,10 +1130,10 @@
         
         // 主題管理列表與當前啟用主題 ID
         themes: DEFAULT_THEMES,
-        activeThemeId: "theme_default_1",   // 當前使用主題（獨立功能，供導師端填報）
-        viewingStatsThemeId: null,          // 點選統計按鈕時於該主題下方展開的主題 ID（獨立功能，絕不連動使用主題）
+        activeThemeId: "theme_default_1",   // 預設主題 ID
+        viewingStatsThemeId: null,          // 點選統計按鈕時於該主題下方展開的主題 ID
         editingThemeId: null,
-        pendingDeleteThemeId: null,   // 待刪除主題確認 ID               // 當前正在編輯的主題 ID
+        pendingDeleteThemeId: null,   // 待刪除主題確認 ID
 
         // 各主題對應之填報資料：{ [themeId]: { [classCode]: { submitted: false, updateTime: '', note: '', availableSlots: {} } } }
         themeRecords: {},
@@ -1165,6 +1143,8 @@
 
         // 統計篩選年級狀態
         statsFilterGrade: 'all',
+        teacherViewMode: 'themes',          // 'themes' (主題列表) 或 'schedule' (課表登記)
+        teacherSelectedThemeId: null,       // 導師目前點選進入登記填報的主題 ID
         statsCurrentDate: new Date(),
         statsDateRangeMode: 'all', // 'all' (全區間所有日期) 或 'week_X'
 
@@ -1172,11 +1152,6 @@
         isModifiedSinceSave: false
       };
 
-      
-      // ====================================================
-      // Firebase Cloud Firestore 配置與資料庫連線
-      // 專案：timeslot-b0553
-      // ====================================================
       const firebaseConfig = {
         apiKey: "AIzaSyDJwqU_AKuF6QYMGpVL5nqbMy6UiW80w9U",
         authDomain: "timeslot-b0553.firebaseapp.com",
@@ -1225,7 +1200,7 @@
 
       function initFirebase() {
         if (typeof firebase === 'undefined') {
-          console.warn("Firebase SDK 未載入，進入本機儲存模式 (localStorage)");
+          console.warn("Firebase SDK 未載入，進入本機儲存模式");
           updateCloudSyncBadge(false, "本機儲存模式");
           return;
         }
@@ -1237,15 +1212,13 @@
           if (typeof firebase.analytics === 'function') {
             try {
               firebaseAnalytics = firebase.analytics();
-            } catch (e) {
-              console.log("Firebase Analytics 初始化略過:", e);
-            }
+            } catch (e) {}
           }
           db = firebase.firestore();
           updateCloudSyncBadge(true, "雲端連線中...");
           setupFirestoreRealtimeListeners();
         } catch (e) {
-          console.warn("Firebase 初始化異常，使用本機模式:", e);
+          console.warn("Firebase 初始化異常:", e);
           updateCloudSyncBadge(false, "本機儲存模式");
         }
       }
@@ -1253,7 +1226,6 @@
       function setupFirestoreRealtimeListeners() {
         if (!db) return;
 
-        // 1. 監聽全局設定 (例如當前啟用主題 ID)
         db.collection('timeslot_config').doc('active').onSnapshot(doc => {
           if (doc.exists) {
             const data = doc.data();
@@ -1265,18 +1237,15 @@
               }
             }
           } else {
-            // 初次建立雲端設定文件
             db.collection('timeslot_config').doc('active').set({
               activeThemeId: state.activeThemeId,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }).catch(console.warn);
           }
         }, err => {
-          console.warn("Firestore config listener error:", err);
           updateCloudSyncBadge(false, "權限待開通 (本機暫存)");
         });
 
-        // 2. 監聽主題清單
         db.collection('timeslot_themes').onSnapshot(snapshot => {
           if (!snapshot.empty) {
             const cloudThemes = [];
@@ -1289,7 +1258,8 @@
                 notice: data.notice || '',
                 availableLabel: data.availableLabel || '可施測',
                 startDate: data.startDate || '',
-                endDate: data.endDate || ''
+                endDate: data.endDate || '',
+                isOpen: data.isOpen !== undefined ? Boolean(data.isOpen) : true
               });
               if (data.lockedClasses) {
                 state.themeLockedClasses[doc.id] = data.lockedClasses;
@@ -1312,6 +1282,7 @@
             state.themes.forEach(th => {
               db.collection('timeslot_themes').doc(th.id).set({
                 ...th,
+                isOpen: th.isOpen !== undefined ? Boolean(th.isOpen) : true,
                 lockedClasses: state.themeLockedClasses[th.id] || {},
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
               }).catch(console.warn);
@@ -1324,7 +1295,6 @@
           updateCloudSyncBadge(false, "請開啟 Firestore 規則");
         });
 
-        // 3. 監聽各班填報資料 (所有班級即時連動)
         db.collection('timeslot_submissions').onSnapshot(snapshot => {
           snapshot.forEach(doc => {
             const data = doc.data();
@@ -1349,9 +1319,7 @@
           } else if (state.currentUser && state.currentUser.role === 'admin') {
             renderThemeList();
           }
-        }, err => {
-          console.warn("Firestore submissions listener error:", err);
-        });
+        }, console.warn);
       }
 
       function syncSubmissionToFirestore(themeId, classCode, classData) {
@@ -1369,7 +1337,6 @@
         }, { merge: true }).then(() => {
           showToast("已成功送出儲存，並同步至雲端資料庫！");
         }).catch(err => {
-          console.warn("雲端同步失敗:", err);
           showToast("已儲存於本機（雲端同步暫時離線）");
         });
       }
@@ -1384,6 +1351,7 @@
           availableLabel: theme.availableLabel,
           startDate: theme.startDate,
           endDate: theme.endDate,
+          isOpen: theme.isOpen !== undefined ? Boolean(theme.isOpen) : true,
           lockedClasses: state.themeLockedClasses[theme.id] || {},
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true }).catch(console.warn);
@@ -1435,15 +1403,11 @@
           const savedRecords = localStorage.getItem(STORAGE_KEY_THEME_RECORDS);
           if (savedRecords) {
             state.themeRecords = JSON.parse(savedRecords);
-          } else {
-            state.themeRecords = {};
           }
 
           const savedLocked = localStorage.getItem(STORAGE_KEY_THEME_LOCKED);
           if (savedLocked) {
             state.themeLockedClasses = JSON.parse(savedLocked);
-          } else {
-            state.themeLockedClasses = {};
           }
 
           const user = sessionStorage.getItem(STORAGE_KEY_USER);
@@ -1471,11 +1435,6 @@
         }
       }
 
-      // ----------------------------------------------------
-      // 計算主題開放選填日期狀態
-      // ----------------------------------------------------
-      
-      // 解析 YYYY-MM-DD 為當地時間 Date 物件
       function parseLocalDate(dateStr) {
         if (!dateStr) return null;
         const parts = dateStr.split('-');
@@ -1483,7 +1442,6 @@
         return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
       }
 
-      // 取得主題開放區間內的所有上課日 (週一至週五)
       function getThemeOpenWeekdays(theme) {
         if (!theme || !theme.startDate || !theme.endDate) {
           return getWeekDays(state.statsCurrentDate || new Date());
@@ -1505,7 +1463,6 @@
         return days.length > 0 ? days : getWeekDays(state.statsCurrentDate || new Date());
       }
 
-      // 將主題開放區間內的所有上課日依週次分組
       function getThemeWeeks(theme) {
         const allDays = getThemeOpenWeekdays(theme);
         const weekMap = new Map();
@@ -1524,8 +1481,6 @@
         return Array.from(weekMap.values());
       }
 
-      
-      // 滑鼠按住左鍵拖曳滑動統計課表功能變數
       let isDragScrolling = false;
       let dragStartX = 0;
       let dragScrollLeft = 0;
@@ -1536,7 +1491,7 @@
         if (!container) return;
 
         container.addEventListener('mousedown', function(e) {
-          if (e.button !== 0) return; // 僅響應滑鼠左鍵
+          if (e.button !== 0) return;
           isDragScrolling = true;
           hasDraggedDistance = false;
           dragStartX = e.pageX - container.offsetLeft;
@@ -1545,7 +1500,7 @@
           container.classList.remove('cursor-grab');
         });
 
-        window.addEventListener('mouseup', function(e) {
+        window.addEventListener('mouseup', function() {
           if (isDragScrolling) {
             isDragScrolling = false;
             container.classList.remove('cursor-grabbing');
@@ -1567,7 +1522,7 @@
         container.addEventListener('mousemove', function(e) {
           if (!isDragScrolling) return;
           const x = e.pageX - container.offsetLeft;
-          const walk = (x - dragStartX) * 1.5; // 滑動加速度
+          const walk = (x - dragStartX) * 1.5;
           if (Math.abs(walk) > 4) {
             hasDraggedDistance = true;
           }
@@ -1600,6 +1555,13 @@
       }
 
       function getActiveTheme() {
+        if (state.currentUser && state.currentUser.role === 'teacher' && state.teacherSelectedThemeId) {
+          const t = state.themes.find(x => x.id === state.teacherSelectedThemeId);
+          if (t) {
+            if (!t.availableLabel) t.availableLabel = "可施測";
+            return t;
+          }
+        }
         const theme = state.themes.find(t => t.id === state.activeThemeId) || state.themes[0] || {
           id: "theme_fallback",
           title: "測驗時段填報系統",
@@ -1712,7 +1674,8 @@
 
         if (!state.currentUser || state.currentUser.role !== 'teacher') return;
         const classCode = state.currentUser.classCode;
-        const records = getThemeRecords(state.activeThemeId);
+        const currentTheme = getActiveTheme();
+        const records = getThemeRecords(currentTheme.id);
         const classData = records[classCode];
 
         const isSubmitted = classData && classData.submitted;
@@ -1738,9 +1701,6 @@
         updateSaveButtonStatus();
       }
 
-      // ----------------------------------------------------
-      // 視圖切換管理
-      // ----------------------------------------------------
       function updateView() {
         const viewGuest = document.getElementById('viewGuest');
         const viewTeacher = document.getElementById('viewTeacher');
@@ -1753,15 +1713,14 @@
         const activeTheme = getActiveTheme();
         const currentLabel = activeTheme.availableLabel || "可施測";
 
-        document.getElementById('headerThemeTitle').textContent = activeTheme.title;
-        document.getElementById('headerSubtitle').textContent = activeTheme.subtitle || '班級時段登記';
-        document.getElementById('guestThemeTitle').textContent = activeTheme.title;
-        document.getElementById('guestThemeDesc').textContent = activeTheme.notice || activeTheme.subtitle || '請輸入班級代號登入登記。';
+        const headerTitleEl = document.getElementById('headerThemeTitle');
+        const headerSubEl = document.getElementById('headerSubtitle');
+        const guestTitleEl = document.getElementById('guestThemeTitle');
+        const guestDescEl = document.getElementById('guestThemeDesc');
 
         document.getElementById('legendAvailableText').textContent = `${currentLabel}（點選標記）`;
         document.getElementById('teacherGuideSubtitle').textContent = "點選單元格即可標記，再次點選或清除即可恢復空白。";
 
-        // 顯示主題注意事項公告
         const noticeBox = document.getElementById('teacherThemeNoticeBox');
         const noticeText = document.getElementById('teacherThemeNoticeText');
         if (activeTheme.notice && activeTheme.notice.trim() !== '') {
@@ -1775,6 +1734,11 @@
           viewGuest.classList.remove('hidden');
           viewTeacher.classList.add('hidden');
           viewAdmin.classList.add('hidden');
+
+          headerTitleEl.textContent = "時段登記系統";
+          headerSubEl.textContent = "班級時段登記";
+          guestTitleEl.textContent = "時段登記系統";
+          guestDescEl.textContent = "歡迎各位班級導師。請輸入您的班級代號登入，登記貴班節次時段，以便教務處與輔導室順利安排施測。";
 
           roleBadge.textContent = '未登入';
           roleBadge.className = 'hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600';
@@ -1795,50 +1759,75 @@
           userInfoArea.classList.add('flex');
           userDisplayName.textContent = `${state.currentUser.className} (${state.currentUser.classCode})`;
 
-          document.getElementById('currentClassTag').textContent = `${state.currentUser.className} (${state.currentUser.classCode})`;
-          document.getElementById('teacherCurrentTheme').textContent = activeTheme.title;
+          const navThemeBtn = document.getElementById('btnNavThemeList');
+          if (navThemeBtn) navThemeBtn.classList.remove('hidden');
 
-          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
-          const isLocked = Boolean(lockedClasses[state.currentUser.classCode]);
-          const bannerLocked = document.getElementById('bannerClassLocked');
-          const tagLocked = document.getElementById('tagClassLocked');
-          const actionButtons = document.getElementById('teacherActionButtonsArea');
-          const noteTextarea = document.getElementById('textareaClassNote');
+          const teacherThemeList = document.getElementById('teacherThemesView');
+          const teacherSchedule = document.getElementById('teacherScheduleView');
 
-          // 檢查開放選填日期區間標籤
-          const bannerDate = document.getElementById('bannerDateRangeNotice');
-          const dateRangeBadge = document.getElementById('teacherDateRangeBadge');
+          if (state.teacherViewMode === 'themes') {
+            headerTitleEl.textContent = "時段登記系統";
+            headerSubEl.textContent = "請選擇測驗主題";
 
-          if (activeTheme.startDate || activeTheme.endDate) {
-            dateRangeBadge.classList.remove('hidden');
-            dateRangeBadge.textContent = `📅 開放選填日期範圍：${activeTheme.startDate || '即日起'} ～ ${activeTheme.endDate || '無期限'}（僅此區間內課表可點選標記）`;
+            teacherThemeList.classList.remove('hidden');
+            teacherSchedule.classList.add('hidden');
+            renderTeacherThemesList();
           } else {
-            dateRangeBadge.classList.add('hidden');
+            const currentTheme = getActiveTheme();
+            headerTitleEl.textContent = currentTheme.title;
+            headerSubEl.textContent = currentTheme.subtitle || '班級時段登記';
+            teacherThemeList.classList.add('hidden');
+            teacherSchedule.classList.remove('hidden');
+
+            document.getElementById('teacherCurrentThemeTop').textContent = currentTheme.title;
+            document.getElementById('currentClassTagTop').textContent = `${state.currentUser.className} (${state.currentUser.classCode})`;
+            document.getElementById('currentClassTag').textContent = `${state.currentUser.className} (${state.currentUser.classCode})`;
+            document.getElementById('teacherCurrentTheme').textContent = currentTheme.title;
+
+            const lockedClasses = getThemeLockedClasses(currentTheme.id);
+            const isLocked = Boolean(lockedClasses[state.currentUser.classCode]);
+            const bannerLocked = document.getElementById('bannerClassLocked');
+            const tagLocked = document.getElementById('tagClassLocked');
+            const actionButtons = document.getElementById('teacherActionButtonsArea');
+            const noteTextarea = document.getElementById('textareaClassNote');
+
+            const bannerDate = document.getElementById('bannerDateRangeNotice');
+            const dateRangeBadge = document.getElementById('teacherDateRangeBadge');
+
+            if (currentTheme.startDate || currentTheme.endDate) {
+              dateRangeBadge.classList.remove('hidden');
+              dateRangeBadge.textContent = `📅 開放選填日期範圍：${currentTheme.startDate || '即日起'} ～ ${currentTheme.endDate || '無期限'}（僅此區間內課表可點選標記）`;
+            } else {
+              dateRangeBadge.classList.add('hidden');
+            }
+
+            if (isLocked) {
+              bannerLocked.classList.remove('hidden');
+              tagLocked.classList.remove('hidden');
+              bannerDate.classList.add('hidden');
+              actionButtons.classList.add('opacity-50', 'pointer-events-none');
+              noteTextarea.disabled = true;
+            } else {
+              bannerLocked.classList.add('hidden');
+              tagLocked.classList.add('hidden');
+              actionButtons.classList.remove('opacity-50', 'pointer-events-none');
+              noteTextarea.disabled = false;
+            }
+
+            const records = getThemeRecords(currentTheme.id);
+            const classRecord = records[state.currentUser.classCode] || { availableSlots: {}, note: '' };
+            noteTextarea.value = classRecord.note || '';
+
+            renderTeacherSchedule();
+            updateSaveButtonStatus();
           }
-
-          if (isLocked) {
-            bannerLocked.classList.remove('hidden');
-            tagLocked.classList.remove('hidden');
-            bannerDate.classList.add('hidden');
-            actionButtons.classList.add('opacity-50', 'pointer-events-none');
-            noteTextarea.disabled = true;
-          } else {
-            bannerLocked.classList.add('hidden');
-            tagLocked.classList.add('hidden');
-            actionButtons.classList.remove('opacity-50', 'pointer-events-none');
-            noteTextarea.disabled = false;
-          }
-
-          const records = getThemeRecords(state.activeThemeId);
-          const classRecord = records[state.currentUser.classCode] || { availableSlots: {}, note: '' };
-          noteTextarea.value = classRecord.note || '';
-
-          renderTeacherSchedule();
-          updateSaveButtonStatus();
         } else if (state.currentUser.role === 'admin') {
           viewGuest.classList.add('hidden');
           viewTeacher.classList.add('hidden');
           viewAdmin.classList.remove('hidden');
+
+          headerTitleEl.textContent = "時段登記系統";
+          headerSubEl.textContent = "管理者控制台";
 
           roleBadge.textContent = '系統管理員';
           roleBadge.className = 'hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800';
@@ -1851,23 +1840,155 @@
         }
       }
 
-      // ----------------------------------------------------
-      // 導師週課表渲染
-      // ----------------------------------------------------
+      function renderTeacherThemesList() {
+        if (!state.currentUser || state.currentUser.role !== 'teacher') return;
+        const container = document.getElementById('teacherThemesContainer');
+        if (!container) return;
+
+        const classCode = state.currentUser.classCode;
+        const className = state.currentUser.className;
+        const classTag = document.getElementById('teacherThemeListClassTag');
+        const countBadge = document.getElementById('teacherThemeCountBadge');
+
+        // 僅篩選出管理者「開放」的主題，未開放的主題不顯示於登入後頁面
+        const openThemes = state.themes.filter(theme => theme.isOpen !== false);
+
+        if (classTag) classTag.textContent = `${className} (${classCode})`;
+        if (countBadge) countBadge.textContent = `共 ${openThemes.length} 個開放主題`;
+
+        container.innerHTML = '';
+
+        if (openThemes.length === 0) {
+          container.innerHTML = `
+            <div class="col-span-full py-12 px-4 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+              <div class="w-12 h-12 mx-auto mb-3 text-slate-300 flex items-center justify-center bg-slate-50 rounded-full">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+              </div>
+              <h4 class="text-base font-bold text-slate-800">目前暫無開放登記的測驗主題</h4>
+              <p class="text-xs text-slate-500 mt-1">管理者尚未開放任何主題填報，請稍後再試或聯繫教務處、輔導室。</p>
+            </div>
+          `;
+          return;
+        }
+
+        openThemes.forEach(theme => {
+          const lockedClasses = getThemeLockedClasses(theme.id);
+          const isLocked = Boolean(lockedClasses[classCode]);
+          const records = getThemeRecords(theme.id);
+          const rec = records[classCode];
+          const hasData = rec && (rec.submitted || (rec.availableSlots && Object.keys(rec.availableSlots).length > 0));
+          const slotCount = (rec && rec.availableSlots) ? Object.keys(rec.availableSlots).length : 0;
+          const currentLabel = theme.availableLabel || "可施測";
+
+          let statusBadge = '';
+          let cardBorder = 'border-slate-200 hover:border-sky-300';
+          let cardBg = 'bg-white';
+          let btnText = '進入登記填報';
+          let btnClass = 'bg-sky-600 hover:bg-sky-700 text-white';
+
+          if (isLocked) {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">🔒 免填報 (已鎖定)</span>';
+            cardBorder = 'border-amber-200 bg-amber-50/20';
+            btnText = '檢視課表 (唯讀免填)';
+            btnClass = 'bg-slate-200 text-slate-700 hover:bg-slate-300';
+          } else if (rec && rec.submitted) {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold text-slate-900 border" style="background-color: #95CACA; border-color: #6ea9a9;">✓ 貴班已送出登記 (已選 ${slotCount} 節)</span>`;
+            cardBorder = 'border-emerald-300 bg-emerald-50/20';
+            btnText = '修改／檢視登記填報';
+            btnClass = 'bg-emerald-600 hover:bg-emerald-700 text-white';
+          } else if (hasData) {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-300">✎ 填寫中未送出 (${slotCount} 節)</span>`;
+            cardBorder = 'border-sky-300 bg-sky-50/20';
+            btnText = '繼續填報登記';
+            btnClass = 'bg-sky-600 hover:bg-sky-700 text-white';
+          } else {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">○ 尚未登記填報</span>';
+          }
+
+          const card = document.createElement('div');
+          card.className = `p-5 sm:p-6 rounded-2xl border shadow-xs transition-all flex flex-col justify-between ${cardBorder} ${cardBg} hover:shadow-md cursor-pointer group`;
+          card.innerHTML = `
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                ${statusBadge}
+              </div>
+              <h3 class="text-base sm:text-lg font-bold text-slate-900 group-hover:text-sky-700 transition">
+                ${theme.title}
+              </h3>
+              <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                ${theme.subtitle || '無填報說明'}
+              </p>
+
+              <!-- 開放選填日期區間 -->
+              <div class="mt-3 flex items-center space-x-1.5 text-xs font-medium text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <svg class="w-4 h-4 text-sky-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>開放日期：${theme.startDate || '即日起'} ～ ${theme.endDate || '無期限'}</span>
+              </div>
+
+              ${theme.notice ? `
+                <div class="mt-2.5 p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-start space-x-1.5">
+                  <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <span class="leading-relaxed"><strong class="font-bold">注意事項：</strong>${theme.notice}</span>
+                </div>
+              ` : ''}
+
+              ${(rec && rec.note && rec.note.trim()) ? `
+                <div class="mt-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                  <span class="font-bold text-slate-800">📝 貴班備註：</span>${rec.note.trim()}
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-100">
+              <button class="w-full py-2.5 px-4 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-2 shadow-xs ${btnClass}" data-id="${theme.id}">
+                <span>${btnText}</span>
+                <svg class="w-4 h-4 transform group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                </svg>
+              </button>
+            </div>
+          `;
+
+          card.addEventListener('click', () => {
+            enterThemeSchedule(theme.id);
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      function enterThemeSchedule(themeId) {
+        state.teacherSelectedThemeId = themeId;
+        state.teacherViewMode = 'schedule';
+        const theme = state.themes.find(t => t.id === themeId);
+        if (theme && theme.startDate) {
+          state.currentDate = parseLocalDate(theme.startDate) || new Date();
+        } else {
+          state.currentDate = new Date();
+        }
+        updateView();
+      }
+
       function renderTeacherSchedule() {
         if (!state.currentUser || state.currentUser.role !== 'teacher') return;
         const classCode = state.currentUser.classCode;
         const activeTheme = getActiveTheme();
         const currentLabel = activeTheme.availableLabel || "可施測";
 
-        const records = getThemeRecords(state.activeThemeId);
+        const records = getThemeRecords(activeTheme.id);
         if (!records[classCode]) {
           records[classCode] = { submitted: false, updateTime: '', note: '', availableSlots: {} };
         }
         const classData = records[classCode];
         if (!classData.availableSlots) classData.availableSlots = {};
 
-        const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+        const lockedClasses = getThemeLockedClasses(activeTheme.id);
         const isClassLocked = Boolean(lockedClasses[classCode]);
 
         const weekDays = getWeekDays(state.currentDate);
@@ -1885,7 +2006,6 @@
         }
         document.getElementById('weekRelativeLabel').textContent = relText;
 
-        // 檢查本週是否有任何一天在開放選填範圍內
         const bannerDate = document.getElementById('bannerDateRangeNotice');
         const hasAnyDayInRange = weekDays.some(day => isDateInRange(formatDate(day), activeTheme));
         if (activeTheme.startDate || activeTheme.endDate) {
@@ -1902,7 +2022,6 @@
           bannerDate.classList.add('hidden');
         }
 
-        // 週課表格頭日期與開放狀態
         for (let i = 0; i < 5; i++) {
           const d = weekDays[i];
           const dateStr = formatDate(d);
@@ -1945,7 +2064,6 @@
             if (dayIndex === 4) td.classList.remove('border-r');
 
             if (isClassLocked) {
-              // 免填班級
               td.className = 'py-2.5 px-2 border-r border-slate-200 select-none bg-slate-100/70 cursor-not-allowed';
               if (dayIndex === 4) td.classList.remove('border-r');
               td.innerHTML = `
@@ -1960,7 +2078,6 @@
                 showToast("本班已設定為免填報，無需勾選", false);
               });
             } else if (!inRange) {
-              // 非開放選填日期：鎖定且不可點選標記
               td.className = 'py-2.5 px-2 border-r border-slate-200 select-none bg-slate-50/70 cursor-not-allowed';
               if (dayIndex === 4) td.classList.remove('border-r');
               td.innerHTML = `
@@ -1972,7 +2089,6 @@
                 showToast(`該日期 (${dateStr}) 非本次測驗開放標記範圍 (${activeTheme.startDate || '起初'} ～ ${activeTheme.endDate || '迄今'})，無法點選標記`, false);
               });
             } else if (isAvailable) {
-              // 在開放範圍內且已標記
               td.className = 'py-2.5 px-2 border-r border-slate-200 select-none cursor-pointer transition-all cell-selected';
               if (dayIndex === 4) td.classList.remove('border-r');
               td.innerHTML = `
@@ -1991,7 +2107,6 @@
                 renderTeacherSchedule();
               });
             } else {
-              // 在開放範圍內且尚未標記（空白）
               td.className = 'py-2.5 px-2 border-r border-slate-200 select-none cursor-pointer transition-all cell-blank';
               if (dayIndex === 4) td.classList.remove('border-r');
               td.innerHTML = `
@@ -2015,11 +2130,6 @@
         });
       }
 
-// ----------------------------------------------------
-      // 管理者現有主題列表渲染
-      // 統計表與各班清單於點選統計按鈕時才顯示於該主題下方！
-      // 當前使用主題為獨立功能，不要與統計按鈕連動！
-      // ----------------------------------------------------
       function renderThemeList() {
         const container = document.getElementById('themeListTableContainer');
         const badge = document.getElementById('themeCountBadge');
@@ -2036,22 +2146,24 @@
         badge.textContent = `共 ${state.themes.length} 個主題`;
 
         state.themes.forEach(theme => {
-          const isActive = theme.id === state.activeThemeId;
           const isViewingStats = state.viewingStatsThemeId === theme.id;
           const labelText = theme.availableLabel || "可施測";
+          const isOpen = theme.isOpen !== false;
 
           const card = document.createElement('div');
           card.id = `themeCard_${theme.id}`;
           card.className = `p-4 sm:p-5 rounded-2xl border transition-all ${
-            isActive ? 'border-sky-300 bg-sky-50/20 shadow-2xs' : 'border-slate-200 bg-white hover:border-slate-300'
+            isOpen ? 'border-sky-300 bg-sky-50/20 shadow-2xs' : 'border-slate-200 bg-white hover:border-slate-300 opacity-90'
           }`;
 
           card.innerHTML = `
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div class="flex-1">
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-2 flex-wrap gap-y-1">
                   <h4 class="font-bold text-sm sm:text-base text-slate-900">${theme.title}</h4>
-                  ${isActive ? '<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-sky-600 text-white shadow-2xs">✓ 目前使用中</span>' : ''}
+                  ${isOpen 
+                    ? '<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-600 text-white shadow-2xs">✓ 已開放填報</span>' 
+                    : '<span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-600">未開放</span>'}
                   <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">標記：${labelText}</span>
                   <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${getThemeDateRangeStatus(theme).badgeClass}">📅 ${getThemeDateRangeStatus(theme).label}</span>
                 </div>
@@ -2062,7 +2174,7 @@
               <!-- 操作功能按鈕群 -->
               <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
                 
-                <!-- 統計按鈕（點選時展開於該主題下方，獨立功能，不連動使用主題，可重複點擊開啟與收合） -->
+                <!-- 統計按鈕 -->
                 <button class="btn-theme-stats px-3.5 py-1.5 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 ${
                   isViewingStats 
                     ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300' 
@@ -2074,6 +2186,14 @@
                   <span>${isViewingStats ? '收合統計' : '統計'}</span>
                 </button>
 
+                <!-- 依需求：在每個主題的統計按鈕右邊加入匯出總表按鈕 -->
+                <button class="btn-export-theme-csv px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition flex items-center space-x-1" data-id="${theme.id}" title="匯出此主題之填報總表 (CSV)">
+                  <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                  </svg>
+                  <span>匯出總表</span>
+                </button>
+
                 <!-- 編輯按鈕 -->
                 <button class="btn-edit-theme px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center space-x-1" data-id="${theme.id}" title="編輯此主題">
                   <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2082,14 +2202,14 @@
                   <span>編輯</span>
                 </button>
 
-                <!-- 設為使用中按鈕（獨立功能，點選才切換使用中主題） -->
-                ${!isActive ? `
-                  <button class="btn-select-theme px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100/70 hover:bg-sky-200/70 rounded-lg transition" data-id="${theme.id}">
-                    設為使用中
-                  </button>
-                ` : `
-                  <span class="text-xs font-bold text-sky-700 px-3 py-1.5 bg-sky-100 rounded-lg">使用中</span>
-                `}
+                <!-- 依需求：設為使用中按鈕改為「開放」按鈕，可同時開放多個主題 -->
+                <button class="btn-toggle-open px-3 py-1.5 text-xs font-bold rounded-lg transition flex items-center space-x-1 ${
+                  isOpen 
+                    ? 'bg-emerald-100 text-emerald-800 hover:bg-rose-50 hover:text-rose-700 border border-emerald-300' 
+                    : 'bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-300'
+                }" data-id="${theme.id}">
+                  <span>${isOpen ? '已開放 (點擊關閉)' : '開放'}</span>
+                </button>
 
                 <!-- 刪除按鈕 -->
                 <button class="btn-delete-theme px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition" data-id="${theme.id}" title="刪除此主題">
@@ -2103,7 +2223,7 @@
             <div id="statsSlot_${theme.id}"></div>
           `;
 
-          // 綁定「統計」按鈕：於該主題下方展開或收合統計，絕不變更使用主題！
+          // 綁定「統計」按鈕
           card.querySelector('.btn-theme-stats').addEventListener('click', function(e) {
             e.stopPropagation();
             const targetId = this.dataset.id;
@@ -2121,23 +2241,37 @@
             renderThemeList();
           });
 
+          // 綁定「匯出總表」按鈕
+          card.querySelector('.btn-export-theme-csv').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const targetId = this.dataset.id;
+            const targetTheme = state.themes.find(t => t.id === targetId);
+            if (targetTheme) {
+              exportThemeCSV(targetTheme);
+            }
+          });
+
           // 綁定「編輯」按鈕
           card.querySelector('.btn-edit-theme').addEventListener('click', function(e) {
             e.stopPropagation();
             openEditThemeModal(theme.id);
           });
 
-          // 綁定「設為使用中」按鈕（獨立功能，點選才切換使用中主題）
-          const btnSelect = card.querySelector('.btn-select-theme');
-          if (btnSelect) {
-            btnSelect.addEventListener('click', function(e) {
+          // 綁定「開放 / 關閉」按鈕（支援同時開放多個主題）
+          const btnToggleOpen = card.querySelector('.btn-toggle-open');
+          if (btnToggleOpen) {
+            btnToggleOpen.addEventListener('click', function(e) {
               e.stopPropagation();
-              state.activeThemeId = this.dataset.id;
+              const targetId = this.dataset.id;
+              const targetTheme = state.themes.find(t => t.id === targetId);
+              if (!targetTheme) return;
+
+              const willOpen = targetTheme.isOpen === false;
+              targetTheme.isOpen = willOpen;
               saveData();
-              updateView();
               renderThemeList();
-              syncActiveThemeToFirestore(this.dataset.id);
-              showToast(`已設定「${theme.title}」為目前使用中主題`);
+              syncThemeToFirestore(targetTheme);
+              showToast(willOpen ? `已開放主題：「${targetTheme.title}」供老師填報` : `已關閉主題：「${targetTheme.title}」`);
             });
           }
 
@@ -2152,7 +2286,7 @@
             const targetTheme = state.themes.find(t => t.id === targetId);
             if (!targetTheme) return;
 
-            // 依使用者需求：刪除主題時需重新輸入管理者密碼確認
+            // 刪除主題時需重新輸入管理者密碼確認
             state.pendingDeleteThemeId = targetId;
             document.getElementById('deleteThemeTargetTitle').textContent = targetTheme.title;
             document.getElementById('inputDeleteThemePassword').value = '';
@@ -2177,37 +2311,31 @@
         });
       }
 
-      // 渲染指定主題之「全校時段可施測統計表」與「各班填報進度清單 (36班)」
       function renderTargetThemeStats(theme) {
         const records = getThemeRecords(theme.id);
         const lockedClasses = getThemeLockedClasses(theme.id);
         const labelText = theme.availableLabel || "可施測";
         const filterGrade = state.statsFilterGrade || 'all';
 
-        // 1. 更新統計表頭標題與說明
         document.getElementById('heatmapHeaderTitle').textContent = `「${theme.title}」全校時段${labelText}班級統計表`;
         document.getElementById('heatmapHeaderDesc').textContent = `數字代表該時段勾選「${labelText}」之班級數量，綠色愈深代表可配合的班級愈多。點選任一儲存格可查看班級名單。`;
         document.getElementById('heatmapLegendLabel').textContent = `${labelText}班級數：`;
         document.getElementById('selectHeatmapGrade').value = filterGrade;
 
-        // 計算開放區間與週次結構
         const allOpenDays = getThemeOpenWeekdays(theme);
         const themeWeeks = getThemeWeeks(theme);
 
-        // 填充檢視範圍/週次下拉選單
         const selectDateRange = document.getElementById('selectStatsDateRange');
         if (selectDateRange) {
           const currentMode = state.statsDateRangeMode || 'all';
           selectDateRange.innerHTML = '';
 
           if (theme.startDate && theme.endDate) {
-            // 提供「全區間完整瀏覽」選項
             const optAll = document.createElement('option');
             optAll.value = 'all';
             optAll.textContent = `🌟 完整顯示全區間所有日期 (${allOpenDays.length} 天)`;
             selectDateRange.appendChild(optAll);
 
-            // 提供各單週選項
             themeWeeks.forEach((w, idx) => {
               const optWeek = document.createElement('option');
               optWeek.value = `week_${idx}`;
@@ -2215,7 +2343,6 @@
               selectDateRange.appendChild(optWeek);
             });
           } else {
-            // 無設定起訖日期時，依目前檢視週次
             const currentWeekDays = getWeekDays(state.statsCurrentDate || new Date());
             const optCurr = document.createElement('option');
             optCurr.value = 'week_0';
@@ -2223,7 +2350,6 @@
             selectDateRange.appendChild(optCurr);
           }
 
-          // 保持選取項目
           if (Array.from(selectDateRange.options).some(o => o.value === currentMode)) {
             selectDateRange.value = currentMode;
           } else {
@@ -2232,7 +2358,6 @@
           }
         }
 
-        // 決定要渲染於統計表格的日期欄位
         let displayDays = [];
         if (state.statsDateRangeMode === 'all') {
           displayDays = allOpenDays;
@@ -2247,7 +2372,6 @@
           displayDays = getWeekDays(state.statsCurrentDate || new Date());
         }
 
-        // 2. 動態渲染統計表格表頭 (Thead)
         const thead = document.getElementById('heatmapTableHead');
         thead.innerHTML = '';
         const trHead = document.createElement('tr');
@@ -2276,7 +2400,6 @@
         });
         thead.appendChild(trHead);
 
-        // 3. 渲染統計表格列 (Tbody)
         const tbody = document.getElementById('heatmapTableBody');
         tbody.innerHTML = '';
 
@@ -2323,7 +2446,7 @@
             `;
 
             td.addEventListener('click', () => {
-              if (hasDraggedDistance) return; // 剛剛是在拖曳滑動，不彈出班級詳細名單
+              if (hasDraggedDistance) return;
               openAdminDetailModal(dateStr, period, day, availableClasses, labelText);
             });
 
@@ -2333,7 +2456,6 @@
           tbody.appendChild(tr);
         });
 
-        // 3. 渲染各班填報進度清單 (36班)
         const container = document.getElementById('classListContainer');
         container.innerHTML = '';
 
@@ -2389,7 +2511,6 @@
               btnLockIconColor = 'text-amber-700';
               dividerColor = 'border-amber-200/80';
             } else if (hasData) {
-              // 依需求：滿版色彩填滿為 #95CACA，外框加深強化立體感，字體維持黑色
               cardBg = 'shadow-xs text-slate-900';
               cardStyle = 'style="background-color: #95CACA; border-color: #6ea9a9;"';
               titleColor = 'text-slate-900 font-bold';
@@ -2430,7 +2551,6 @@
           container.appendChild(gradeCard);
         });
 
-        // 綁定各班鎖定切換
         container.querySelectorAll('.btn-toggle-class-lock').forEach(btn => {
           btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -2448,7 +2568,6 @@
           });
         });
 
-        // 綁定全學年鎖定切換
         container.querySelectorAll('.btn-batch-lock-grade').forEach(btn => {
           btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -2478,7 +2597,6 @@
         `;
         document.getElementById('progressBar').style.width = `${percent}%`;
 
-        // 4. 統計彙整：各班導師補充備註彙整列表
         const notesContainer = document.getElementById('classNotesTableArea');
         const notesBadge = document.getElementById('notesCountBadge');
         const noteItems = [];
@@ -2596,9 +2714,6 @@
         showToast("CSV 報表匯出成功");
       }
 
-      // ----------------------------------------------------
-      // 事件監聽與互動邏輯
-      // ----------------------------------------------------
       function bindEvents() {
         setupDragToScroll('heatmapScrollContainer');
         document.getElementById('formTeacherLoginQuick').addEventListener('submit', function(e) {
@@ -2614,20 +2729,12 @@
             classCode: parsed.code,
             className: parsed.name
           };
+          state.teacherViewMode = 'themes';
+          state.teacherSelectedThemeId = null;
           state.isModifiedSinceSave = false;
-          const activeTheme = getActiveTheme();
-          if (activeTheme && activeTheme.startDate) {
-            const todayStr = formatDate(new Date());
-            if (!isDateInRange(todayStr, activeTheme)) {
-              const parts = activeTheme.startDate.split('-');
-              if (parts.length === 3) {
-                state.currentDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-              }
-            }
-          }
           saveData();
           updateView();
-          showToast(`歡迎 ${parsed.name} 導師登入`);
+          showToast(`歡迎 ${parsed.name} 導師，請點選欲填報的測驗主題`);
         });
 
         document.getElementById('btnOpenTeacherLogin').addEventListener('click', function() {
@@ -2655,21 +2762,13 @@
             classCode: parsed.code,
             className: parsed.name
           };
+          state.teacherViewMode = 'themes';
+          state.teacherSelectedThemeId = null;
           state.isModifiedSinceSave = false;
-          const activeTheme = getActiveTheme();
-          if (activeTheme && activeTheme.startDate) {
-            const todayStr = formatDate(new Date());
-            if (!isDateInRange(todayStr, activeTheme)) {
-              const parts = activeTheme.startDate.split('-');
-              if (parts.length === 3) {
-                state.currentDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-              }
-            }
-          }
           saveData();
           document.getElementById('modalTeacherLogin').classList.add('hidden');
           updateView();
-          showToast(`歡迎 ${parsed.name} 導師登入`);
+          showToast(`歡迎 ${parsed.name} 導師，請點選欲填報的測驗主題`);
         });
 
         document.getElementById('btnAdminIcon').addEventListener('click', function() {
@@ -2707,11 +2806,33 @@
 
         document.getElementById('btnLogout').addEventListener('click', function() {
           state.currentUser = null;
+          state.teacherViewMode = 'themes';
+          state.teacherSelectedThemeId = null;
           state.isModifiedSinceSave = false;
           saveData();
           updateView();
           showToast("已成功登出");
         });
+
+        const btnBackThemes = document.getElementById('btnBackToThemeList');
+        if (btnBackThemes) {
+          btnBackThemes.addEventListener('click', function() {
+            state.teacherViewMode = 'themes';
+            state.teacherSelectedThemeId = null;
+            updateView();
+          });
+        }
+
+        const btnNavThemes = document.getElementById('btnNavThemeList');
+        if (btnNavThemes) {
+          btnNavThemes.addEventListener('click', function() {
+            if (state.currentUser && state.currentUser.role === 'teacher') {
+              state.teacherViewMode = 'themes';
+              state.teacherSelectedThemeId = null;
+              updateView();
+            }
+          });
+        }
 
         document.getElementById('btnAdminExit').addEventListener('click', function() {
           state.currentUser = null;
@@ -2719,7 +2840,6 @@
           updateView();
         });
 
-        // 首頁複製填報連結按鈕
         const btnCopyUrl = document.getElementById('btnCopyAppUrl');
         if (btnCopyUrl) {
           btnCopyUrl.addEventListener('click', function() {
@@ -2728,7 +2848,7 @@
               navigator.clipboard.writeText(shareUrl).then(() => {
                 showToast("已成功複製系統填報連結至剪貼簿！");
               }).catch(() => {
-                showToast("系統連結已產生：" + shareUrl);
+                showToast("系統連結：" + shareUrl);
               });
             } else {
               showToast("系統連結：" + shareUrl);
@@ -2758,12 +2878,14 @@
         document.getElementById('btnSaveSchedule').addEventListener('click', function() {
           if (!state.currentUser || state.currentUser.role !== 'teacher') return;
           const code = state.currentUser.classCode;
-          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          const currentTheme = getActiveTheme();
+          const themeId = currentTheme.id;
+          const lockedClasses = getThemeLockedClasses(themeId);
           if (lockedClasses[code]) {
             showToast("本班已設定為免填報，無需儲存", false);
             return;
           }
-          const records = getThemeRecords(state.activeThemeId);
+          const records = getThemeRecords(themeId);
           if (!records[code]) {
             records[code] = { availableSlots: {} };
           }
@@ -2775,7 +2897,7 @@
           saveData();
           updateSaveButtonStatus();
           if (db) {
-            syncSubmissionToFirestore(state.activeThemeId, code, records[code]);
+            syncSubmissionToFirestore(themeId, code, records[code]);
           } else {
             showToast("已成功送出儲存！");
           }
@@ -2784,18 +2906,17 @@
         document.getElementById('btnSetMorningAvailable').addEventListener('click', function() {
           if (!state.currentUser || state.currentUser.role !== 'teacher') return;
           const code = state.currentUser.classCode;
-          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          const activeTheme = getActiveTheme();
+          const lockedClasses = getThemeLockedClasses(activeTheme.id);
           if (lockedClasses[code]) {
             showToast("本班已設定為免填報，無需勾選", false);
             return;
           }
-          const activeTheme = getActiveTheme();
-          const records = getThemeRecords(state.activeThemeId);
+          const records = getThemeRecords(activeTheme.id);
           if (!records[code]) records[code] = { availableSlots: {} };
           if (!records[code].availableSlots) records[code].availableSlots = {};
           const weekDays = getWeekDays(state.currentDate);
 
-          // 僅針對在開放選填範圍內的日期進行批次勾選
           const selectableDays = weekDays.filter(day => isDateInRange(formatDate(day), activeTheme));
           if (selectableDays.length === 0) {
             showToast("本週無在開放選填範圍內的日期", false);
@@ -2829,18 +2950,17 @@
         document.getElementById('btnSetLunchAvailable').addEventListener('click', function() {
           if (!state.currentUser || state.currentUser.role !== 'teacher') return;
           const code = state.currentUser.classCode;
-          const lockedClasses = getThemeLockedClasses(state.activeThemeId);
+          const activeTheme = getActiveTheme();
+          const lockedClasses = getThemeLockedClasses(activeTheme.id);
           if (lockedClasses[code]) {
             showToast("本班已設定為免填報，無需勾選", false);
             return;
           }
-          const activeTheme = getActiveTheme();
-          const records = getThemeRecords(state.activeThemeId);
+          const records = getThemeRecords(activeTheme.id);
           if (!records[code]) records[code] = { availableSlots: {} };
           if (!records[code].availableSlots) records[code].availableSlots = {};
           const weekDays = getWeekDays(state.currentDate);
 
-          // 僅針對在開放選填範圍內的日期進行批次勾選
           const selectableDays = weekDays.filter(day => isDateInRange(formatDate(day), activeTheme));
           if (selectableDays.length === 0) {
             showToast("本週無在開放選填範圍內的日期", false);
@@ -2874,7 +2994,8 @@
         document.getElementById('btnClearAllOptions').addEventListener('click', function() {
           if (!state.currentUser || state.currentUser.role !== 'teacher') return;
           const code = state.currentUser.classCode;
-          const records = getThemeRecords(state.activeThemeId);
+          const activeTheme = getActiveTheme();
+          const records = getThemeRecords(activeTheme.id);
           if (records[code] && records[code].availableSlots) {
             const weekDays = getWeekDays(state.currentDate);
             weekDays.forEach(day => {
@@ -2903,7 +3024,6 @@
           document.getElementById('modalAdminDetail').classList.add('hidden');
         });
 
-        // 雲端資料庫手動同步按鈕
         const btnManualSync = document.getElementById('btnManualCloudSync');
         if (btnManualSync) {
           btnManualSync.addEventListener('click', function() {
@@ -2916,7 +3036,6 @@
           });
         }
 
-        // 打開新增主題彈窗
         document.getElementById('btnOpenAddThemeModal').addEventListener('click', function() {
           document.getElementById('inputNewThemeTitle').value = '';
           document.getElementById('inputNewThemeSubtitle').value = '';
@@ -2934,7 +3053,6 @@
           document.getElementById('modalAddNewTheme').classList.add('hidden');
         });
 
-        // 提交新增主題
         document.getElementById('formAddNewTheme').addEventListener('submit', function(e) {
           e.preventDefault();
           const title = document.getElementById('inputNewThemeTitle').value.trim();
@@ -2955,7 +3073,7 @@
           }
 
           const newId = "theme_" + Date.now();
-          const newTheme = { id: newId, title, subtitle, notice, availableLabel, startDate, endDate };
+          const newTheme = { id: newId, title, subtitle, notice, availableLabel, startDate, endDate, isOpen: true };
           state.themes.push(newTheme);
           state.activeThemeId = newId;
 
@@ -2976,7 +3094,6 @@
           document.getElementById('modalEditTheme').classList.add('hidden');
         });
 
-        // 提交編輯主題
         document.getElementById('formEditCurrentTheme').addEventListener('submit', function(e) {
           e.preventDefault();
           const targetId = state.editingThemeId || state.activeThemeId;
@@ -3015,7 +3132,6 @@
           showToast("主題內容已成功儲存修改！");
         });
 
-        // 統計面板內部子切換按鈕事件
         const tabBtnHeatmap = document.getElementById('tabBtnHeatmap');
         const tabBtnClasses = document.getElementById('tabBtnClasses');
         const contentHeatmap = document.getElementById('tabContentHeatmap');
@@ -3041,7 +3157,6 @@
           renderThemeList();
         });
 
-        // 統計面板檢視範圍/週次篩選事件
         const selectDateRange = document.getElementById('selectStatsDateRange');
         if (selectDateRange) {
           selectDateRange.addEventListener('change', function() {
@@ -3053,7 +3168,6 @@
           });
         }
 
-        // 統計面板上一週按鈕
         const btnStatsPrev = document.getElementById('btnStatsPrevWeek');
         if (btnStatsPrev) {
           btnStatsPrev.addEventListener('click', function(e) {
@@ -3078,7 +3192,6 @@
           });
         }
 
-        // 統計面板下一週按鈕
         const btnStatsNext = document.getElementById('btnStatsNextWeek');
         if (btnStatsNext) {
           btnStatsNext.addEventListener('click', function(e) {
@@ -3103,27 +3216,12 @@
           });
         }
 
-        // 統計面板年級篩選事件
         document.getElementById('selectHeatmapGrade').addEventListener('change', function() {
           state.statsFilterGrade = this.value;
           if (state.viewingStatsThemeId) {
             const theme = state.themes.find(t => t.id === state.viewingStatsThemeId);
             if (theme) renderTargetThemeStats(theme);
           }
-        });
-
-        // 全域 CSV 匯出（匯出當前使用中主題）
-        document.getElementById('btnAdminExportCSV').addEventListener('click', function() {
-          const activeTheme = getActiveTheme();
-          exportThemeCSV(activeTheme);
-        });
-
-        // 清空當前使用主題填報紀錄
-        document.getElementById('btnClearCurrentThemeData').addEventListener('click', function() {
-          state.themeRecords[state.activeThemeId] = {};
-          saveData();
-          renderThemeList();
-          showToast("已清空目前使用中主題之所有班級填報紀錄");
         });
 
         // 刪除主題密碼確認彈窗事件
