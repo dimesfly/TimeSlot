@@ -641,50 +641,54 @@
                 </div>
               </div>
 
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-600 flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span>點擊班級卡片之「<strong>鎖定免填</strong>」可設定該班免填；或點擊年級標題旁按鈕進行全學年免填切換。</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[10px]">🔒免填</span>
-                  <span class="px-1.5 py-0.5 rounded text-slate-900 font-bold text-[10px]" style="background-color: #95CACA; border: 1px solid #6ea9a9;">✓已填</span>
-                  <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-300 text-[10px]">未填</span>
-                </div>
+            <!-- 說明提示 -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-600 flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>點擊班級卡片之「<strong>鎖定</strong>」可設定該班免填；或點擊年級標題旁按鈕進行全學年免填切換。</span>
               </div>
-
-              <div id="classListContainer" class="space-y-3"></div>
-            </div>
-
-            <!-- 子區塊 3：導師補充備註統計彙整 -->
-            <div id="statsNotesContainer" class="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="text-sm sm:text-base font-bold text-slate-800 flex items-center">
-                    <span class="w-2 h-2 rounded-full bg-sky-600 mr-2"></span>
-                    導師補充備註彙整清單
-                  </h4>
-                  <p class="text-xs text-slate-500 mt-0.5">
-                    統整各班導師登記時填寫之特殊排程考量、調課或校外教學說明。
-                  </p>
-                </div>
-                <span id="notesCountBadge" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">0 則備註</span>
-              </div>
-              <div id="classNotesTableArea" class="divide-y divide-slate-100 text-xs">
-                <!-- 動態填入備註清單 -->
+              <div class="flex items-center space-x-2">
+                <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 font-bold text-[10px]">🔒免填</span>
+                <span class="px-1.5 py-0.5 rounded text-slate-900 font-bold text-[10px]" style="background-color: #95CACA; border: 1px solid #6ea9a9;">✓已填</span>
+                <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-300 text-[10px]">未填</span>
               </div>
             </div>
 
+            <!-- 年級卡片清單網格 -->
+            <div id="classListContainer" class="space-y-3">
+              <!-- 動態渲染 1~6 年級卡片 -->
+            </div>
           </div>
-        </div>
 
+          <!-- 子區塊 3：導師補充備註統計彙整（解決導師補充備註未列入統計問題） -->
+          <div id="statsNotesContainer" class="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm sm:text-base font-bold text-slate-800 flex items-center">
+                  <span class="w-2 h-2 rounded-full bg-sky-600 mr-2"></span>
+                  導師補充備註彙整清單
+                </h4>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  統整各班導師登記時填寫之特殊排程考量、調課或校外教學說明。
+                </p>
+              </div>
+              <span id="notesCountBadge" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">0 則備註</span>
+            </div>
+            <div id="classNotesTableArea" class="divide-y divide-slate-100 text-xs">
+              <!-- 動態填入備註清單 -->
+            </div>
+          </div>
+
+        </div>
       </div>
 
     </div>
 
-  </main>
+  </div>
 
-  <!-- ==================== 彈出視窗 1：導師登入彈窗 ==================== -->
+</main>
+
+<!-- ==================== 彈出視窗 1：導師登入彈窗 ==================== -->
   <div id="modalTeacherLogin" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all p-6">
       <div class="flex items-center justify-between mb-4">
@@ -903,6 +907,49 @@
           </p>
         </div>
 
+        <!-- 需填寫年級勾選區塊 -->
+        <div class="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-semibold text-slate-700">
+              需填寫年級 <span class="text-rose-500">*</span>
+            </label>
+            <div class="space-x-1.5 text-[11px]">
+              <button type="button" id="btnSelectAllGradesNew" class="text-sky-600 hover:text-sky-800 font-semibold underline">全選</button>
+              <span class="text-slate-300">|</span>
+              <button type="button" id="btnClearAllGradesNew" class="text-slate-500 hover:text-slate-700 font-semibold underline">全不選</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1" id="newThemeGradeCheckboxes">
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-emerald-300 transition">
+              <input type="checkbox" name="newThemeGrade" value="1" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+              <span class="font-medium">一年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-emerald-300 transition">
+              <input type="checkbox" name="newThemeGrade" value="2" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+              <span class="font-medium">二年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-emerald-300 transition">
+              <input type="checkbox" name="newThemeGrade" value="3" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+              <span class="font-medium">三年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-emerald-300 transition">
+              <input type="checkbox" name="newThemeGrade" value="4" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+              <span class="font-medium">四年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-emerald-300 transition">
+              <input type="checkbox" name="newThemeGrade" value="5" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+              <span class="font-medium">五年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-emerald-300 transition">
+              <input type="checkbox" name="newThemeGrade" value="6" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+              <span class="font-medium">六年級</span>
+            </label>
+          </div>
+          <p class="text-[11px] text-slate-500">
+            💡 說明：未勾選的年級，其所屬班級將自動預設鎖定為「免填報」，導師端將直接顯示為免填。
+          </p>
+        </div>
+
         <div>
           <label for="textareaNewThemeNotice" class="block text-xs font-semibold text-slate-700 mb-1">
             公告給導師之注意事項
@@ -994,6 +1041,49 @@
           </p>
         </div>
 
+        <!-- 編輯視窗：需填寫年級勾選區塊 -->
+        <div class="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-semibold text-slate-700">
+              需填寫年級 <span class="text-rose-500">*</span>
+            </label>
+            <div class="space-x-1.5 text-[11px]">
+              <button type="button" id="btnSelectAllGradesEdit" class="text-sky-600 hover:text-sky-800 font-semibold underline">全選</button>
+              <span class="text-slate-300">|</span>
+              <button type="button" id="btnClearAllGradesEdit" class="text-slate-500 hover:text-slate-700 font-semibold underline">全不選</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1" id="editThemeGradeCheckboxes">
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-sky-300 transition">
+              <input type="checkbox" name="editThemeGrade" value="1" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500">
+              <span class="font-medium">一年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-sky-300 transition">
+              <input type="checkbox" name="editThemeGrade" value="2" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500">
+              <span class="font-medium">二年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-sky-300 transition">
+              <input type="checkbox" name="editThemeGrade" value="3" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500">
+              <span class="font-medium">三年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-sky-300 transition">
+              <input type="checkbox" name="editThemeGrade" value="4" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500">
+              <span class="font-medium">四年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-sky-300 transition">
+              <input type="checkbox" name="editThemeGrade" value="5" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500">
+              <span class="font-medium">五年級</span>
+            </label>
+            <label class="flex items-center space-x-1.5 text-xs text-slate-700 cursor-pointer bg-white p-2 rounded-lg border border-slate-200 hover:border-sky-300 transition">
+              <input type="checkbox" name="editThemeGrade" value="6" class="w-4 h-4 text-sky-600 rounded focus:ring-sky-500">
+              <span class="font-medium">六年級</span>
+            </label>
+          </div>
+          <p class="text-[11px] text-slate-500">
+            💡 說明：未勾選的年級班級將自動設為鎖定免填，勾選的年級若原被鎖定則會自動解除鎖定。
+          </p>
+        </div>
+
         <div>
           <label for="textareaEditThemeNotice" class="block text-xs font-semibold text-slate-700 mb-1">
             公告給導師之注意事項
@@ -1065,7 +1155,7 @@
       const DEFAULT_THEMES = [
         {
           id: "theme_default_1",
-          title: "113學年度 第一學期 學生學習成效與心智評量測驗",
+          title: "115學年度 第一學期 學生學習成效與心智評量測驗",
           subtitle: "班級時段登記（選項預設空白，點選即為標記）",
           notice: "敬請各位導師點選貴班可施測之時段，未點選時段預設保持空白。",
           availableLabel: "可施測",
@@ -1891,8 +1981,8 @@
           if (isLocked) {
             statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">🔒 免填報 (已鎖定)</span>';
             cardBorder = 'border-amber-200 bg-amber-50/20';
-            btnText = '檢視課表 (唯讀免填)';
-            btnClass = 'bg-slate-200 text-slate-700 hover:bg-slate-300';
+            btnText = '免填';
+            btnClass = 'bg-slate-200 text-slate-500 cursor-default';
           } else if (rec && rec.submitted) {
             statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold text-slate-900 border" style="background-color: #95CACA; border-color: #6ea9a9;">✓ 貴班已送出登記 (已選 ${slotCount} 節)</span>`;
             cardBorder = 'border-emerald-300 bg-emerald-50/20';
@@ -1908,13 +1998,13 @@
           }
 
           const card = document.createElement('div');
-          card.className = `p-5 sm:p-6 rounded-2xl border shadow-xs transition-all flex flex-col justify-between ${cardBorder} ${cardBg} hover:shadow-md cursor-pointer group`;
+          card.className = `p-5 sm:p-6 rounded-2xl border shadow-xs transition-all flex flex-col justify-between ${cardBorder} ${cardBg} ${isLocked ? 'cursor-default' : 'hover:shadow-md cursor-pointer group'}`;
           card.innerHTML = `
             <div>
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 ${statusBadge}
               </div>
-              <h3 class="text-base sm:text-lg font-bold text-slate-900 group-hover:text-sky-700 transition">
+              <h3 class="text-base sm:text-lg font-bold text-slate-900 ${isLocked ? '' : 'group-hover:text-sky-700 transition'}">
                 ${theme.title}
               </h3>
               <p class="text-xs text-slate-500 mt-1 leading-relaxed">
@@ -1946,18 +2036,22 @@
             </div>
 
             <div class="mt-5 pt-3 border-t border-slate-100">
-              <button class="w-full py-2.5 px-4 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-2 shadow-xs ${btnClass}" data-id="${theme.id}">
+              <button type="button" class="w-full py-2.5 px-4 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-2 shadow-xs ${btnClass}" data-id="${theme.id}" ${isLocked ? 'disabled' : ''}>
                 <span>${btnText}</span>
-                <svg class="w-4 h-4 transform group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                </svg>
+                ${isLocked ? '' : `
+                  <svg class="w-4 h-4 transform group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                  </svg>
+                `}
               </button>
             </div>
           `;
 
-          card.addEventListener('click', () => {
-            enterThemeSchedule(theme.id);
-          });
+          if (!isLocked) {
+            card.addEventListener('click', () => {
+              enterThemeSchedule(theme.id);
+            });
+          }
 
           container.appendChild(card);
         });
@@ -2539,7 +2633,7 @@
                         ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>' 
                         : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>'}
                     </svg>
-                    <span>${isLocked ? '解除鎖定' : '鎖定免填'}</span>
+                    <span>${isLocked ? '解除鎖定' : '鎖定'}</span>
                   </button>
                 </div>
               </div>
@@ -2676,6 +2770,17 @@
         document.getElementById('inputEditThemeLabel').value = theme.availableLabel || '可施測';
         document.getElementById('inputEditThemeStartDate').value = theme.startDate || '';
         document.getElementById('inputEditThemeEndDate').value = theme.endDate || '';
+
+        // 依據目前鎖定名單動態設定年級勾選狀態
+        const lockedClasses = getThemeLockedClasses(themeId);
+        const editCheckboxes = document.querySelectorAll('input[name="editThemeGrade"]');
+        editCheckboxes.forEach(cb => {
+          const g = parseInt(cb.value, 10);
+          const gradeClasses = ALL_CLASSES.filter(c => c.grade === g);
+          // 若該年級所有班級都在鎖定名單中，則視為未勾選
+          const allLocked = gradeClasses.every(c => Boolean(lockedClasses[c.code]));
+          cb.checked = !allLocked;
+        });
 
         document.getElementById('modalEditTheme').classList.remove('hidden');
       }
@@ -3036,6 +3141,7 @@
           });
         }
 
+        // 打開新增主題彈窗
         document.getElementById('btnOpenAddThemeModal').addEventListener('click', function() {
           document.getElementById('inputNewThemeTitle').value = '';
           document.getElementById('inputNewThemeSubtitle').value = '';
@@ -3043,7 +3149,24 @@
           document.getElementById('inputNewThemeLabel').value = '';
           document.getElementById('inputNewThemeStartDate').value = '';
           document.getElementById('inputNewThemeEndDate').value = '';
+          // 預設全選 1~6 年級
+          document.querySelectorAll('input[name="newThemeGrade"]').forEach(cb => cb.checked = true);
           document.getElementById('modalAddNewTheme').classList.remove('hidden');
+        });
+
+        // 年級勾選快捷按鈕事件
+        document.getElementById('btnSelectAllGradesNew').addEventListener('click', () => {
+          document.querySelectorAll('input[name="newThemeGrade"]').forEach(cb => cb.checked = true);
+        });
+        document.getElementById('btnClearAllGradesNew').addEventListener('click', () => {
+          document.querySelectorAll('input[name="newThemeGrade"]').forEach(cb => cb.checked = false);
+        });
+
+        document.getElementById('btnSelectAllGradesEdit').addEventListener('click', () => {
+          document.querySelectorAll('input[name="editThemeGrade"]').forEach(cb => cb.checked = true);
+        });
+        document.getElementById('btnClearAllGradesEdit').addEventListener('click', () => {
+          document.querySelectorAll('input[name="editThemeGrade"]').forEach(cb => cb.checked = false);
         });
 
         document.getElementById('btnCloseAddThemeModal').addEventListener('click', function() {
@@ -3053,6 +3176,7 @@
           document.getElementById('modalAddNewTheme').classList.add('hidden');
         });
 
+        // 提交新增主題
         document.getElementById('formAddNewTheme').addEventListener('submit', function(e) {
           e.preventDefault();
           const title = document.getElementById('inputNewThemeTitle').value.trim();
@@ -3072,10 +3196,28 @@
             return;
           }
 
+          // 收集勾選的年級
+          const selectedGrades = Array.from(document.querySelectorAll('input[name="newThemeGrade"]:checked'))
+            .map(cb => parseInt(cb.value, 10));
+
+          if (selectedGrades.length === 0) {
+            showToast("請至少勾選一個需填寫年級", false);
+            return;
+          }
+
           const newId = "theme_" + Date.now();
           const newTheme = { id: newId, title, subtitle, notice, availableLabel, startDate, endDate, isOpen: true };
           state.themes.push(newTheme);
           state.activeThemeId = newId;
+
+          // 沒勾選的年級之班級預設鎖定
+          const lockedMap = {};
+          ALL_CLASSES.forEach(c => {
+            if (!selectedGrades.includes(c.grade)) {
+              lockedMap[c.code] = true;
+            }
+          });
+          state.themeLockedClasses[newId] = lockedMap;
 
           document.getElementById('modalAddNewTheme').classList.add('hidden');
           saveData();
@@ -3083,7 +3225,8 @@
           renderThemeList();
           syncThemeToFirestore(newTheme);
           syncActiveThemeToFirestore(newId);
-          showToast(`已新增並啟用主題：「${title}」`);
+          syncLockedClassesToFirestore(newId, lockedMap);
+          showToast(`已新增主題：「${title}」，未勾選年級已預設鎖定免填`);
         });
 
         // 關閉編輯主題彈窗
@@ -3094,6 +3237,7 @@
           document.getElementById('modalEditTheme').classList.add('hidden');
         });
 
+        // 提交編輯主題
         document.getElementById('formEditCurrentTheme').addEventListener('submit', function(e) {
           e.preventDefault();
           const targetId = state.editingThemeId || state.activeThemeId;
@@ -3117,6 +3261,15 @@
             return;
           }
 
+          // 收集編輯後的年級勾選
+          const selectedGrades = Array.from(document.querySelectorAll('input[name="editThemeGrade"]:checked'))
+            .map(cb => parseInt(cb.value, 10));
+
+          if (selectedGrades.length === 0) {
+            showToast("請至少勾選一個需填寫年級", false);
+            return;
+          }
+
           theme.title = title;
           theme.subtitle = subtitle;
           theme.notice = notice;
@@ -3124,12 +3277,23 @@
           theme.startDate = startDate;
           theme.endDate = endDate;
 
+          // 更新免填鎖定名單：未勾選的年級班級自動鎖定，有勾選的年級班級自動解鎖
+          const lockedClasses = getThemeLockedClasses(targetId);
+          ALL_CLASSES.forEach(c => {
+            if (!selectedGrades.includes(c.grade)) {
+              lockedClasses[c.code] = true;
+            } else {
+              delete lockedClasses[c.code];
+            }
+          });
+
           document.getElementById('modalEditTheme').classList.add('hidden');
           saveData();
           updateView();
           renderThemeList();
           syncThemeToFirestore(theme);
-          showToast("主題內容已成功儲存修改！");
+          syncLockedClassesToFirestore(targetId, lockedClasses);
+          showToast("主題內容與年級填報鎖定已成功儲存修改！");
         });
 
         const tabBtnHeatmap = document.getElementById('tabBtnHeatmap');
